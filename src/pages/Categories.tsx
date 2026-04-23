@@ -9,7 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Cat { id: string; name: string; description: string | null; sku_prefix: string; sku_seq: number }
@@ -17,8 +18,19 @@ interface Cat { id: string; name: string; description: string | null; sku_prefix
 const Categories = () => {
   const { hasRole } = useAuth();
   const canEdit = hasRole("admin", "manager");
+  const canDelete = hasRole("admin");
   const [rows, setRows] = useState<Cat[]>([]);
   const [open, setOpen] = useState(false);
+  const [toDelete, setToDelete] = useState<Cat | null>(null);
+
+  const remove = async () => {
+    if (!toDelete) return;
+    const { error } = await supabase.from("categories").delete().eq("id", toDelete.id);
+    if (error) return toast.error(error.message);
+    toast.success("Category deleted");
+    setToDelete(null);
+    load();
+  };
 
   const load = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
@@ -64,7 +76,7 @@ const Categories = () => {
         <CardContent className="p-4">
           <Table>
             <TableHeader>
-              <TableRow><TableHead>Name</TableHead><TableHead>Prefix</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Items numbered</TableHead></TableRow>
+              <TableRow><TableHead>Name</TableHead><TableHead>Prefix</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Items numbered</TableHead>{canDelete && <TableHead className="w-16" />}</TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((c) => (
@@ -73,12 +85,34 @@ const Categories = () => {
                   <TableCell><Badge variant="outline" className="font-mono">{c.sku_prefix}</Badge></TableCell>
                   <TableCell className="text-muted-foreground">{c.description ?? "—"}</TableCell>
                   <TableCell className="text-right">{c.sku_seq}</TableCell>
+                  {canDelete && (
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => setToDelete(c)} aria-label="Delete category">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-semibold">{toDelete?.name}</span>. Items in this category will become uncategorized.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={remove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
