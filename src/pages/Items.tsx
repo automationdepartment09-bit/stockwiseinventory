@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search } from "lucide-react";
+import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus } from "lucide-react";
 import { toast } from "sonner";
 
 type SortField = "name" | "sku" | "stock" | "unit_price" | "created_at";
@@ -50,6 +50,11 @@ const Items = () => {
   const [withdrawQty, setWithdrawQty] = useState<string>("1");
   const [withdrawReason, setWithdrawReason] = useState<string>("");
   const [withdrawing, setWithdrawing] = useState(false);
+  const [addItem, setAddItem] = useState<Item | null>(null);
+  const [addWh, setAddWh] = useState<string>("");
+  const [addQty, setAddQty] = useState<string>("1");
+  const [addReason, setAddReason] = useState<string>("");
+  const [requesting, setRequesting] = useState(false);
 
   const load = async () => {
     const [{ data: its }, { data: lvls }, { data: cats }, { data: whs }] = await Promise.all([
@@ -130,6 +135,33 @@ const Items = () => {
     if (error) return toast.error(error.message);
     toast.success("Item created — SKU auto-generated");
     setOpen(false); load();
+  };
+
+  const openAdd = (it: Item) => {
+    setAddItem(it);
+    setAddWh(warehouses[0]?.id ?? "");
+    setAddQty("1");
+    setAddReason("");
+  };
+
+  const submitAdd = async () => {
+    if (!addItem) return;
+    const qty = Number(addQty);
+    if (!addWh) return toast.error("Select a warehouse");
+    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
+    if (!user?.id) return toast.error("Not signed in");
+    setRequesting(true);
+    const { error } = await supabase.from("stock_requests").insert({
+      item_id: addItem.id,
+      warehouse_id: addWh,
+      quantity: qty,
+      reason: addReason.trim() || null,
+      requested_by: user.id,
+    });
+    setRequesting(false);
+    if (error) return toast.error(error.message);
+    toast.success("Request submitted — pending approval");
+    setAddItem(null);
   };
 
   const openWithdraw = (it: Item) => {
@@ -280,16 +312,21 @@ const Items = () => {
                       {low ? <Badge variant="destructive">Low</Badge> : <Badge variant="outline" className="border-primary/50 text-primary">OK</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
-                      {canWithdraw && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={stock <= 0}
-                          onClick={() => openWithdraw(it)}
-                        >
-                          <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openAdd(it)}>
+                          <PackagePlus className="mr-1 h-3.5 w-3.5" />Add stock
                         </Button>
-                      )}
+                        {canWithdraw && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={stock <= 0}
+                            onClick={() => openWithdraw(it)}
+                          >
+                            <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -341,6 +378,48 @@ const Items = () => {
             <Button variant="outline" onClick={() => setWithdrawItem(null)}>Cancel</Button>
             <Button onClick={submitWithdraw} disabled={withdrawing}>
               {withdrawing ? "Withdrawing…" : "Confirm withdrawal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!addItem} onOpenChange={(o) => !o && setAddItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request stock addition</DialogTitle>
+            <DialogDescription>
+              {addItem ? <>Item: <span className="font-medium">{addItem.name}</span> <span className="font-mono text-xs text-muted-foreground">({addItem.sku})</span></> : null}
+              <div className="mt-1 text-xs">Requires admin or manager approval before stock is added.</div>
+            </DialogDescription>
+          </DialogHeader>
+          {addItem && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Warehouse</Label>
+                <Select value={addWh} onValueChange={setAddWh}>
+                  <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map((w) => {
+                      const q = (stockByWh.get(addItem.id) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0;
+                      return <SelectItem key={w.id} value={w.id}>{w.name} — {q} on hand</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Quantity to add</Label>
+                <Input type="number" min="1" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reason / source (optional)</Label>
+                <Input value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddItem(null)}>Cancel</Button>
+            <Button onClick={submitAdd} disabled={requesting}>
+              {requesting ? "Submitting…" : "Submit for approval"}
             </Button>
           </DialogFooter>
         </DialogContent>
