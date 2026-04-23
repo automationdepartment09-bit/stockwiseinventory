@@ -316,9 +316,6 @@ const Items = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openAdd(it)}>
-                          <PackagePlus className="mr-1 h-3.5 w-3.5" />Add stock
-                        </Button>
                         {canWithdraw && (
                           <Button
                             size="sm"
