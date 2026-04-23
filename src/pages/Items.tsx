@@ -1,0 +1,250 @@
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowUpDown, Download, Plus, Search } from "lucide-react";
+import { toast } from "sonner";
+
+type SortField = "name" | "sku" | "stock" | "unit_price" | "created_at";
+type SortDir = "asc" | "desc";
+
+interface Item {
+  id: string; sku: string; name: string; description: string | null;
+  category_id: string | null; unit_price: number; cost_price: number; reorder_level: number;
+  is_active: boolean; created_at: string;
+}
+interface Category { id: string; name: string; sku_prefix: string }
+
+const Items = () => {
+  const { hasRole } = useAuth();
+  const canEdit = hasRole("admin", "manager");
+  const [params, setParams] = useSearchParams();
+  const [items, setItems] = useState<Item[]>([]);
+  const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [search, setSearch] = useState(params.get("q") ?? "");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    const [{ data: its }, { data: lvls }, { data: cats }] = await Promise.all([
+      supabase.from("items").select("*"),
+      supabase.from("stock_levels").select("item_id, quantity"),
+      supabase.from("categories").select("id, name, sku_prefix"),
+    ]);
+    setItems((its ?? []) as Item[]);
+    const m = new Map<string, number>();
+    (lvls ?? []).forEach((l: any) => m.set(l.item_id, (m.get(l.item_id) ?? 0) + l.quantity));
+    setStockMap(m);
+    setCategories((cats ?? []) as Category[]);
+  };
+  useEffect(() => { load(); }, []);
+  useEffect(() => { setSearch(params.get("q") ?? ""); }, [params]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = items.filter((it) => {
+      const matchQ = !q || it.name.toLowerCase().includes(q) || it.sku.toLowerCase().includes(q);
+      const matchCat = categoryFilter === "all" || it.category_id === categoryFilter;
+      return matchQ && matchCat;
+    });
+    list = [...list].sort((a, b) => {
+      let av: any = a[sortField as keyof Item]; let bv: any = b[sortField as keyof Item];
+      if (sortField === "stock") { av = stockMap.get(a.id) ?? 0; bv = stockMap.get(b.id) ?? 0; }
+      if (typeof av === "string") { av = av.toLowerCase(); bv = (bv as string).toLowerCase(); }
+      if (av < bv) return sortDir === "asc" ? -1 : 1;
+      if (av > bv) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [items, search, categoryFilter, sortField, sortDir, stockMap]);
+
+  const toggleSort = (f: SortField) => {
+    if (sortField === f) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortField(f); setSortDir("asc"); }
+  };
+
+  const exportCsv = () => {
+    const headers = ["SKU", "Name", "Category", "Stock", "Unit price", "Cost price", "Reorder level"];
+    const catName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "";
+    const rows = filtered.map((it) => [
+      it.sku, it.name, catName(it.category_id), stockMap.get(it.id) ?? 0, it.unit_price, it.cost_price, it.reorder_level,
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "items.csv"; a.click();
+  };
+
+  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      name: String(fd.get("name") ?? "").trim(),
+      description: String(fd.get("description") ?? "").trim() || null,
+      category_id: String(fd.get("category_id") ?? "") || null,
+      unit_price: Number(fd.get("unit_price") ?? 0),
+      cost_price: Number(fd.get("cost_price") ?? 0),
+      reorder_level: Number(fd.get("reorder_level") ?? 0),
+      barcode: String(fd.get("barcode") ?? "").trim() || null,
+      created_by: (await supabase.auth.getUser()).data.user?.id,
+    };
+    if (!payload.name) return toast.error("Name required");
+    setSaving(true);
+    const { error } = await supabase.from("items").insert(payload as any);
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Item created — SKU auto-generated");
+    setOpen(false); load();
+  };
+
+  return (
+    <div className="space-y-4">
+      <PageHeader
+        title="Items"
+        description="Manage your inventory catalog. SKUs are generated automatically."
+        actions={
+          <>
+            <Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button>
+            {canEdit && (
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button><Plus className="mr-2 h-4 w-4" />New item</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create item</DialogTitle>
+                    <DialogDescription>SKU auto-generated from category prefix.</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreate} className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label>Name</Label>
+                      <Input name="name" required maxLength={200} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Category</Label>
+                      <Select name="category_id">
+                        <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
+                        <SelectContent>
+                          {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1.5">
+                        <Label>Unit price</Label>
+                        <Input name="unit_price" type="number" step="0.01" defaultValue="0" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Cost</Label>
+                        <Input name="cost_price" type="number" step="0.01" defaultValue="0" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Reorder at</Label>
+                        <Input name="reorder_level" type="number" defaultValue="0" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Barcode (optional)</Label>
+                      <Input name="barcode" maxLength={100} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Description</Label>
+                      <Textarea name="description" maxLength={1000} />
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit" disabled={saving}>{saving ? "Creating…" : "Create"}</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </>
+        }
+      />
+
+      <Card className="glass-card">
+        <CardContent className="p-4">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <div className="relative min-w-[260px] flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search name or SKU…"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); if (e.target.value) setParams({ q: e.target.value }); else setParams({}); }}
+                className="pl-9"
+              />
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead><SortBtn label="SKU" field="sku" current={sortField} dir={sortDir} onClick={toggleSort} /></TableHead>
+                <TableHead><SortBtn label="Name" field="name" current={sortField} dir={sortDir} onClick={toggleSort} /></TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right"><SortBtn label="Stock" field="stock" current={sortField} dir={sortDir} onClick={toggleSort} /></TableHead>
+                <TableHead className="text-right"><SortBtn label="Price" field="unit_price" current={sortField} dir={sortDir} onClick={toggleSort} /></TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((it) => {
+                const stock = stockMap.get(it.id) ?? 0;
+                const low = it.reorder_level > 0 && stock <= it.reorder_level;
+                const cat = categories.find((c) => c.id === it.category_id);
+                return (
+                  <TableRow key={it.id}>
+                    <TableCell className="font-mono text-xs">{it.sku}</TableCell>
+                    <TableCell className="font-medium">{it.name}</TableCell>
+                    <TableCell>{cat ? <Badge variant="outline">{cat.name}</Badge> : "—"}</TableCell>
+                    <TableCell className="text-right">{stock}</TableCell>
+                    <TableCell className="text-right">${Number(it.unit_price).toFixed(2)}</TableCell>
+                    <TableCell>
+                      {low ? <Badge variant="destructive">Low</Badge> : <Badge variant="outline" className="border-primary/50 text-primary">OK</Badge>}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {filtered.length === 0 && (
+                <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">No items found.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const SortBtn = ({ label, field, current, dir, onClick }: { label: string; field: SortField; current: SortField; dir: SortDir; onClick: (f: SortField) => void }) => (
+  <button className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground" onClick={() => onClick(field)}>
+    {label}
+    <ArrowUpDown className={`h-3 w-3 ${current === field ? "text-primary" : ""}`} />
+    {current === field && <span className="text-[10px]">{dir === "asc" ? "↑" : "↓"}</span>}
+  </button>
+);
+
+export default Items;
