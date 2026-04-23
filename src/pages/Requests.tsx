@@ -179,9 +179,11 @@ const Requests = () => {
                     <TableCell className="text-right">{r.quantity}</TableCell>
                     <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">{r.reason ?? "—"}</TableCell>
                     <TableCell>
-                      {r.status === "pending" && <Badge variant="outline">Pending</Badge>}
-                      {r.status === "approved" && <Badge className="bg-primary/20 text-primary">Approved</Badge>}
-                      {r.status === "rejected" && <Badge variant="destructive">Rejected</Badge>}
+                      {r.status === "rejected"
+                        ? <Badge variant="destructive">Rejected</Badge>
+                        : r.status === "pending"
+                          ? <Badge variant="outline">Pending</Badge>
+                          : <Badge className={statusBadgeClass[r.status]}>{STATUS_LABEL[r.status]}</Badge>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
@@ -196,6 +198,20 @@ const Requests = () => {
                         ) : (
                           <Button size="sm" variant="outline" onClick={() => { setNoteFor(r.id); setNote(""); }}>Review</Button>
                         )
+                      )}
+                      {canReview && r.status !== "pending" && NEXT_STATUSES[r.status].length > 0 && (
+                        <div className="flex items-center justify-end gap-2">
+                          {NEXT_STATUSES[r.status].map((next) => {
+                            const Icon = next === "on_arrival" ? Truck : next === "arrived" ? PackageOpen : next === "received" ? PackageCheck : next === "rejected" ? X : Check;
+                            const variant = next === "rejected" ? "destructive" : next === "received" ? "default" : "outline";
+                            return (
+                              <Button key={next} size="sm" variant={variant as any} onClick={() => review(r.id, next)}>
+                                <Icon className="mr-1 h-3.5 w-3.5" />
+                                {STATUS_LABEL[next]}
+                              </Button>
+                            );
+                          })}
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
