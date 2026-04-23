@@ -76,7 +76,7 @@ const Categories = () => {
         <CardContent className="p-4">
           <Table>
             <TableHeader>
-              <TableRow><TableHead>Name</TableHead><TableHead>Prefix</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Items numbered</TableHead></TableRow>
+              <TableRow><TableHead>Name</TableHead><TableHead>Prefix</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Items numbered</TableHead>{canDelete && <TableHead className="w-16" />}</TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((c) => (
@@ -85,12 +85,34 @@ const Categories = () => {
                   <TableCell><Badge variant="outline" className="font-mono">{c.sku_prefix}</Badge></TableCell>
                   <TableCell className="text-muted-foreground">{c.description ?? "—"}</TableCell>
                   <TableCell className="text-right">{c.sku_seq}</TableCell>
+                  {canDelete && (
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => setToDelete(c)} aria-label="Delete category">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-semibold">{toDelete?.name}</span>. Items in this category will become uncategorized.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={remove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
