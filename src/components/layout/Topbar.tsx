@@ -34,7 +34,7 @@ export const Topbar = () => {
     };
     load();
     const channel = supabase
-      .channel("notif-count")
+      .channel(`notif-count-${user.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
