@@ -11,15 +11,45 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Check, X, Plus } from "lucide-react";
+import { Check, X, Plus, Truck, PackageCheck, PackageOpen } from "lucide-react";
 import { toast } from "sonner";
+
+type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 
 interface Req {
   id: string; item_id: string; warehouse_id: string; quantity: number;
-  reason: string | null; status: "pending" | "approved" | "rejected";
+  reason: string | null; status: ReqStatus;
   requested_by: string; reviewed_by: string | null; review_note: string | null;
   reviewed_at: string | null; created_at: string;
 }
+
+const STATUS_LABEL: Record<ReqStatus, string> = {
+  pending: "Pending",
+  approved: "Approved",
+  rejected: "Rejected",
+  on_arrival: "On arrival",
+  arrived: "Arrived",
+  received: "Received",
+};
+
+const statusBadgeClass: Record<ReqStatus, string> = {
+  pending: "",
+  approved: "bg-primary/20 text-primary",
+  rejected: "",
+  on_arrival: "bg-warning/20 text-warning",
+  arrived: "bg-accent/30 text-accent-foreground",
+  received: "bg-success/20 text-success",
+};
+
+// Allowed forward transitions (reviewers/managers only)
+const NEXT_STATUSES: Record<ReqStatus, ReqStatus[]> = {
+  pending: ["approved", "rejected"],
+  approved: ["on_arrival", "rejected"],
+  on_arrival: ["arrived"],
+  arrived: ["received"],
+  received: [],
+  rejected: [],
+};
 
 const Requests = () => {
   const { user, hasRole } = useAuth();
@@ -60,18 +90,19 @@ const Requests = () => {
   useEffect(() => { load(); }, []);
 
   const filtered = rows.filter((r) => {
-    if (tab === "pending") return r.status === "pending";
+    if (tab === "pending") return r.status !== "received" && r.status !== "rejected";
     if (tab === "mine") return r.requested_by === user?.id;
     return true;
   });
 
-  const review = async (id: string, status: "approved" | "rejected") => {
-    const { error } = await supabase
-      .from("stock_requests")
-      .update({ status, reviewed_by: user?.id, review_note: note || null, reviewed_at: new Date().toISOString() })
-      .eq("id", id);
+  const review = async (id: string, status: ReqStatus) => {
+    const includeReview = status === "approved" || status === "rejected";
+    const patch = includeReview
+      ? { status, reviewed_by: user?.id ?? null, review_note: note || null, reviewed_at: new Date().toISOString() }
+      : { status };
+    const { error } = await supabase.from("stock_requests").update(patch).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success(`Request ${status}`);
+    toast.success(`Marked as ${STATUS_LABEL[status].toLowerCase()}`);
     setNoteFor(null); setNote("");
     load();
   };
@@ -116,7 +147,7 @@ const Requests = () => {
       />
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="pending">Open</TabsTrigger>
           <TabsTrigger value="mine">My requests</TabsTrigger>
           <TabsTrigger value="all">All</TabsTrigger>
         </TabsList>
@@ -148,9 +179,11 @@ const Requests = () => {
                     <TableCell className="text-right">{r.quantity}</TableCell>
                     <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">{r.reason ?? "—"}</TableCell>
                     <TableCell>
-                      {r.status === "pending" && <Badge variant="outline">Pending</Badge>}
-                      {r.status === "approved" && <Badge className="bg-primary/20 text-primary">Approved</Badge>}
-                      {r.status === "rejected" && <Badge variant="destructive">Rejected</Badge>}
+                      {r.status === "rejected"
+                        ? <Badge variant="destructive">Rejected</Badge>
+                        : r.status === "pending"
+                          ? <Badge variant="outline">Pending</Badge>
+                          : <Badge className={statusBadgeClass[r.status]}>{STATUS_LABEL[r.status]}</Badge>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</TableCell>
                     <TableCell className="text-right">
@@ -165,6 +198,20 @@ const Requests = () => {
                         ) : (
                           <Button size="sm" variant="outline" onClick={() => { setNoteFor(r.id); setNote(""); }}>Review</Button>
                         )
+                      )}
+                      {canReview && r.status !== "pending" && NEXT_STATUSES[r.status].length > 0 && (
+                        <div className="flex items-center justify-end gap-2">
+                          {NEXT_STATUSES[r.status].map((next) => {
+                            const Icon = next === "on_arrival" ? Truck : next === "arrived" ? PackageOpen : next === "received" ? PackageCheck : next === "rejected" ? X : Check;
+                            const variant = next === "rejected" ? "destructive" : next === "received" ? "default" : "outline";
+                            return (
+                              <Button key={next} size="sm" variant={variant as any} onClick={() => review(r.id, next)}>
+                                <Icon className="mr-1 h-3.5 w-3.5" />
+                                {STATUS_LABEL[next]}
+                              </Button>
+                            );
+                          })}
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
