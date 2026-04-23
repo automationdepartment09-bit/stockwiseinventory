@@ -90,7 +90,7 @@ const Requests = () => {
   useEffect(() => { load(); }, []);
 
   const filtered = rows.filter((r) => {
-    if (tab === "pending") return r.status === "pending";
+    if (tab === "pending") return r.status !== "received" && r.status !== "rejected";
     if (tab === "mine") return r.requested_by === user?.id;
     return true;
   });
