@@ -50,7 +50,8 @@ const Items = () => {
   const [withdrawQty, setWithdrawQty] = useState<string>("1");
   const [withdrawReason, setWithdrawReason] = useState<string>("");
   const [withdrawing, setWithdrawing] = useState(false);
-  const [addItem, setAddItem] = useState<Item | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addItemId, setAddItemId] = useState<string>("");
   const [addWh, setAddWh] = useState<string>("");
   const [addQty, setAddQty] = useState<string>("1");
   const [addReason, setAddReason] = useState<string>("");
