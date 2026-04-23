@@ -385,41 +385,51 @@ const Items = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!addItem} onOpenChange={(o) => !o && setAddItem(null)}>
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Request stock addition</DialogTitle>
             <DialogDescription>
-              {addItem ? <>Item: <span className="font-medium">{addItem.name}</span> <span className="font-mono text-xs text-muted-foreground">({addItem.sku})</span></> : null}
-              <div className="mt-1 text-xs">Requires admin or manager approval before stock is added.</div>
+              Requires admin or manager approval before stock is added.
             </DialogDescription>
           </DialogHeader>
-          {addItem && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Warehouse</Label>
-                <Select value={addWh} onValueChange={setAddWh}>
-                  <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
-                  <SelectContent>
-                    {warehouses.map((w) => {
-                      const q = (stockByWh.get(addItem.id) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0;
-                      return <SelectItem key={w.id} value={w.id}>{w.name} — {q} on hand</SelectItem>;
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Quantity to add</Label>
-                <Input type="number" min="1" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Reason / source (optional)</Label>
-                <Input value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
-              </div>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Item</Label>
+              <Select value={addItemId} onValueChange={setAddItemId}>
+                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
+                <SelectContent>
+                  {items.map((it) => (
+                    <SelectItem key={it.id} value={it.id}>
+                      {it.name} <span className="ml-1 font-mono text-xs text-muted-foreground">({it.sku})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            <div className="space-y-1.5">
+              <Label>Warehouse</Label>
+              <Select value={addWh} onValueChange={setAddWh}>
+                <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                <SelectContent>
+                  {warehouses.map((w) => {
+                    const q = addItemId ? ((stockByWh.get(addItemId) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0) : 0;
+                    return <SelectItem key={w.id} value={w.id}>{w.name}{addItemId ? ` — ${q} on hand` : ""}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Quantity to add</Label>
+              <Input type="number" min="1" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Reason / source (optional)</Label>
+              <Input value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
+            </div>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddItem(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button onClick={submitAdd} disabled={requesting}>
               {requesting ? "Submitting…" : "Submit for approval"}
             </Button>
