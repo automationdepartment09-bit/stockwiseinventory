@@ -41,6 +41,7 @@ const Items = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState(params.get("q") ?? "");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
