@@ -30,11 +30,14 @@ interface Warehouse { id: string; name: string }
 interface StockRow { item_id: string; warehouse_id: string; quantity: number }
 
 const Items = () => {
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const canEdit = hasRole("admin", "manager");
+  const canWithdraw = hasRole("admin", "manager", "staff");
   const [params, setParams] = useSearchParams();
   const [items, setItems] = useState<Item[]>([]);
   const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
+  const [stockByWh, setStockByWh] = useState<Map<string, StockRow[]>>(new Map());
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState(params.get("q") ?? "");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -42,18 +45,32 @@ const Items = () => {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [withdrawItem, setWithdrawItem] = useState<Item | null>(null);
+  const [withdrawWh, setWithdrawWh] = useState<string>("");
+  const [withdrawQty, setWithdrawQty] = useState<string>("1");
+  const [withdrawReason, setWithdrawReason] = useState<string>("");
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const load = async () => {
-    const [{ data: its }, { data: lvls }, { data: cats }] = await Promise.all([
+    const [{ data: its }, { data: lvls }, { data: cats }, { data: whs }] = await Promise.all([
       supabase.from("items").select("*"),
-      supabase.from("stock_levels").select("item_id, quantity"),
+      supabase.from("stock_levels").select("item_id, warehouse_id, quantity"),
       supabase.from("categories").select("id, name, sku_prefix"),
+      supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
     ]);
     setItems((its ?? []) as Item[]);
     const m = new Map<string, number>();
-    (lvls ?? []).forEach((l: any) => m.set(l.item_id, (m.get(l.item_id) ?? 0) + l.quantity));
+    const byWh = new Map<string, StockRow[]>();
+    (lvls ?? []).forEach((l: any) => {
+      m.set(l.item_id, (m.get(l.item_id) ?? 0) + l.quantity);
+      const arr = byWh.get(l.item_id) ?? [];
+      arr.push(l as StockRow);
+      byWh.set(l.item_id, arr);
+    });
     setStockMap(m);
+    setStockByWh(byWh);
     setCategories((cats ?? []) as Category[]);
+    setWarehouses((whs ?? []) as Warehouse[]);
   };
   useEffect(() => { load(); }, []);
   useEffect(() => { setSearch(params.get("q") ?? ""); }, [params]);
