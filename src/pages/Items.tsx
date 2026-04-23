@@ -208,6 +208,7 @@ const Items = () => {
         actions={
           <>
             <Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button>
+            <Button variant="outline" onClick={() => openAdd()}><PackagePlus className="mr-2 h-4 w-4" />Add stock</Button>
             {canEdit && (
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
