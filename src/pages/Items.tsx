@@ -312,16 +312,21 @@ const Items = () => {
                       {low ? <Badge variant="destructive">Low</Badge> : <Badge variant="outline" className="border-primary/50 text-primary">OK</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
-                      {canWithdraw && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={stock <= 0}
-                          onClick={() => openWithdraw(it)}
-                        >
-                          <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openAdd(it)}>
+                          <PackagePlus className="mr-1 h-3.5 w-3.5" />Add stock
                         </Button>
-                      )}
+                        {canWithdraw && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={stock <= 0}
+                            onClick={() => openWithdraw(it)}
+                          >
+                            <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -373,6 +378,48 @@ const Items = () => {
             <Button variant="outline" onClick={() => setWithdrawItem(null)}>Cancel</Button>
             <Button onClick={submitWithdraw} disabled={withdrawing}>
               {withdrawing ? "Withdrawing…" : "Confirm withdrawal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!addItem} onOpenChange={(o) => !o && setAddItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request stock addition</DialogTitle>
+            <DialogDescription>
+              {addItem ? <>Item: <span className="font-medium">{addItem.name}</span> <span className="font-mono text-xs text-muted-foreground">({addItem.sku})</span></> : null}
+              <div className="mt-1 text-xs">Requires admin or manager approval before stock is added.</div>
+            </DialogDescription>
+          </DialogHeader>
+          {addItem && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Warehouse</Label>
+                <Select value={addWh} onValueChange={setAddWh}>
+                  <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map((w) => {
+                      const q = (stockByWh.get(addItem.id) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0;
+                      return <SelectItem key={w.id} value={w.id}>{w.name} — {q} on hand</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Quantity to add</Label>
+                <Input type="number" min="1" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reason / source (optional)</Label>
+                <Input value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddItem(null)}>Cancel</Button>
+            <Button onClick={submitAdd} disabled={requesting}>
+              {requesting ? "Submitting…" : "Submit for approval"}
             </Button>
           </DialogFooter>
         </DialogContent>
