@@ -138,22 +138,23 @@ const Items = () => {
     setOpen(false); load();
   };
 
-  const openAdd = (it: Item) => {
-    setAddItem(it);
+  const openAdd = (it?: Item) => {
+    setAddItemId(it?.id ?? "");
     setAddWh(warehouses[0]?.id ?? "");
     setAddQty("1");
     setAddReason("");
+    setAddOpen(true);
   };
 
   const submitAdd = async () => {
-    if (!addItem) return;
+    if (!addItemId) return toast.error("Select an item");
     const qty = Number(addQty);
     if (!addWh) return toast.error("Select a warehouse");
     if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
     if (!user?.id) return toast.error("Not signed in");
     setRequesting(true);
     const { error } = await supabase.from("stock_requests").insert({
-      item_id: addItem.id,
+      item_id: addItemId,
       warehouse_id: addWh,
       quantity: qty,
       reason: addReason.trim() || null,
@@ -162,7 +163,7 @@ const Items = () => {
     setRequesting(false);
     if (error) return toast.error(error.message);
     toast.success("Request submitted — pending approval");
-    setAddItem(null);
+    setAddOpen(false);
   };
 
   const openWithdraw = (it: Item) => {
