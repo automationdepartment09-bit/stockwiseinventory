@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search } from "lucide-react";
+import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus } from "lucide-react";
 import { toast } from "sonner";
 
 type SortField = "name" | "sku" | "stock" | "unit_price" | "created_at";
@@ -50,6 +50,11 @@ const Items = () => {
   const [withdrawQty, setWithdrawQty] = useState<string>("1");
   const [withdrawReason, setWithdrawReason] = useState<string>("");
   const [withdrawing, setWithdrawing] = useState(false);
+  const [addItem, setAddItem] = useState<Item | null>(null);
+  const [addWh, setAddWh] = useState<string>("");
+  const [addQty, setAddQty] = useState<string>("1");
+  const [addReason, setAddReason] = useState<string>("");
+  const [requesting, setRequesting] = useState(false);
 
   const load = async () => {
     const [{ data: its }, { data: lvls }, { data: cats }, { data: whs }] = await Promise.all([
@@ -132,7 +137,32 @@ const Items = () => {
     setOpen(false); load();
   };
 
-  const openWithdraw = (it: Item) => {
+  const openAdd = (it: Item) => {
+    setAddItem(it);
+    setAddWh(warehouses[0]?.id ?? "");
+    setAddQty("1");
+    setAddReason("");
+  };
+
+  const submitAdd = async () => {
+    if (!addItem) return;
+    const qty = Number(addQty);
+    if (!addWh) return toast.error("Select a warehouse");
+    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
+    if (!user?.id) return toast.error("Not signed in");
+    setRequesting(true);
+    const { error } = await supabase.from("stock_requests").insert({
+      item_id: addItem.id,
+      warehouse_id: addWh,
+      quantity: qty,
+      reason: addReason.trim() || null,
+      requested_by: user.id,
+    });
+    setRequesting(false);
+    if (error) return toast.error(error.message);
+    toast.success("Request submitted — pending approval");
+    setAddItem(null);
+  };
     setWithdrawItem(it);
     const rows = stockByWh.get(it.id) ?? [];
     const firstWithStock = rows.find((r) => r.quantity > 0);
