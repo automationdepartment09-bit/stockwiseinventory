@@ -83,7 +83,7 @@ const Dashboard = () => {
   const cards = [
     { label: "Total items", value: kpi.totalItems.toLocaleString(), icon: Package, accent: "from-primary/20 to-primary/5" },
     { label: "Units in stock", value: kpi.totalUnits.toLocaleString(), icon: Boxes, accent: "from-secondary/20 to-secondary/5" },
-    { label: "Stock value", value: `$${kpi.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: DollarSign, accent: "from-primary/20 to-secondary/10" },
+    { label: "Stock value", value: `₱${kpi.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, icon: DollarSign, accent: "from-primary/20 to-secondary/10" },
     { label: "Warehouses", value: kpi.warehouses, icon: Warehouse, accent: "from-secondary/20 to-primary/10" },
     { label: "Low stock", value: kpi.lowStock, icon: AlertTriangle, accent: "from-destructive/20 to-destructive/5" },
   ];
