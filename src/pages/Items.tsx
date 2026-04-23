@@ -41,6 +41,7 @@ const Items = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState(params.get("q") ?? "");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
@@ -81,6 +82,11 @@ const Items = () => {
   useEffect(() => { load(); }, []);
   useEffect(() => { setSearch(params.get("q") ?? ""); }, [params]);
 
+  const stockFor = (itemId: string) => {
+    if (warehouseFilter === "all") return stockMap.get(itemId) ?? 0;
+    return (stockByWh.get(itemId) ?? []).find((r) => r.warehouse_id === warehouseFilter)?.quantity ?? 0;
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = items.filter((it) => {
@@ -90,14 +96,14 @@ const Items = () => {
     });
     list = [...list].sort((a, b) => {
       let av: any = a[sortField as keyof Item]; let bv: any = b[sortField as keyof Item];
-      if (sortField === "stock") { av = stockMap.get(a.id) ?? 0; bv = stockMap.get(b.id) ?? 0; }
+      if (sortField === "stock") { av = stockFor(a.id); bv = stockFor(b.id); }
       if (typeof av === "string") { av = av.toLowerCase(); bv = (bv as string).toLowerCase(); }
       if (av < bv) return sortDir === "asc" ? -1 : 1;
       if (av > bv) return sortDir === "asc" ? 1 : -1;
       return 0;
     });
     return list;
-  }, [items, search, categoryFilter, sortField, sortDir, stockMap]);
+  }, [items, search, categoryFilter, warehouseFilter, sortField, sortDir, stockMap, stockByWh]);
 
   const toggleSort = (f: SortField) => {
     if (sortField === f) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -279,10 +285,17 @@ const Items = () => {
               />
             </div>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
                 {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All warehouses (overall)</SelectItem>
+                {warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -301,15 +314,21 @@ const Items = () => {
             </TableHeader>
             <TableBody>
               {filtered.map((it) => {
-                const stock = stockMap.get(it.id) ?? 0;
-                const low = it.reorder_level > 0 && stock <= it.reorder_level;
+                const stock = stockFor(it.id);
+                const overall = stockMap.get(it.id) ?? 0;
+                const low = it.reorder_level > 0 && overall <= it.reorder_level;
                 const cat = categories.find((c) => c.id === it.category_id);
                 return (
                   <TableRow key={it.id}>
                     <TableCell className="font-mono text-xs">{it.sku}</TableCell>
                     <TableCell className="font-medium">{it.name}</TableCell>
                     <TableCell>{cat ? <Badge variant="outline">{cat.name}</Badge> : "—"}</TableCell>
-                    <TableCell className="text-right">{stock}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="font-medium">{stock}</div>
+                      {warehouseFilter !== "all" && (
+                        <div className="text-[10px] text-muted-foreground">overall: {overall}</div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">₱{Number(it.unit_price).toFixed(2)}</TableCell>
                     <TableCell>
                       {low ? <Badge variant="destructive">Low</Badge> : <Badge variant="outline" className="border-primary/50 text-primary">OK</Badge>}
