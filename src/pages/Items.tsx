@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUpDown, Download, Plus, Search } from "lucide-react";
+import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
 type SortField = "name" | "sku" | "stock" | "unit_price" | "created_at";
@@ -26,6 +26,8 @@ interface Item {
   is_active: boolean; created_at: string;
 }
 interface Category { id: string; name: string; sku_prefix: string }
+interface Warehouse { id: string; name: string }
+interface StockRow { item_id: string; warehouse_id: string; quantity: number }
 
 const Items = () => {
   const { hasRole } = useAuth();
