@@ -301,6 +301,50 @@ const Items = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!withdrawItem} onOpenChange={(o) => !o && setWithdrawItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Withdraw stock</DialogTitle>
+            <DialogDescription>
+              {withdrawItem ? <>Item: <span className="font-medium">{withdrawItem.name}</span> <span className="font-mono text-xs text-muted-foreground">({withdrawItem.sku})</span></> : null}
+            </DialogDescription>
+          </DialogHeader>
+          {withdrawItem && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>From warehouse</Label>
+                <Select value={withdrawWh} onValueChange={setWithdrawWh}>
+                  <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map((w) => {
+                      const q = (stockByWh.get(withdrawItem.id) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0;
+                      return <SelectItem key={w.id} value={w.id} disabled={q <= 0}>{w.name} — {q} on hand</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Quantity</Label>
+                <Input type="number" min="1" value={withdrawQty} onChange={(e) => setWithdrawQty(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reason (optional)</Label>
+                <Input value={withdrawReason} onChange={(e) => setWithdrawReason(e.target.value)} placeholder="Sale, damage, internal use…" maxLength={200} />
+              </div>
+              <div className="rounded-md border border-border bg-muted/30 p-2 text-xs text-muted-foreground">
+                Estimated value: <span className="font-medium text-foreground">₱{(Number(withdrawItem.unit_price) * (Number(withdrawQty) || 0)).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWithdrawItem(null)}>Cancel</Button>
+            <Button onClick={submitWithdraw} disabled={withdrawing}>
+              {withdrawing ? "Withdrawing…" : "Confirm withdrawal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
