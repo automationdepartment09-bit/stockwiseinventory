@@ -18,8 +18,19 @@ interface Cat { id: string; name: string; description: string | null; sku_prefix
 const Categories = () => {
   const { hasRole } = useAuth();
   const canEdit = hasRole("admin", "manager");
+  const canDelete = hasRole("admin");
   const [rows, setRows] = useState<Cat[]>([]);
   const [open, setOpen] = useState(false);
+  const [toDelete, setToDelete] = useState<Cat | null>(null);
+
+  const remove = async () => {
+    if (!toDelete) return;
+    const { error } = await supabase.from("categories").delete().eq("id", toDelete.id);
+    if (error) return toast.error(error.message);
+    toast.success("Category deleted");
+    setToDelete(null);
+    load();
+  };
 
   const load = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
