@@ -15,6 +15,7 @@ import Warehouses from "./pages/Warehouses";
 import Movements from "./pages/Movements";
 import Analytics from "./pages/Analytics";
 import Notifications from "./pages/Notifications";
+import Requests from "./pages/Requests";
 import Profile from "./pages/Profile";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAudit from "./pages/admin/AdminAudit";
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/movements" element={<Movements />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/requests" element={<Requests />} />
               <Route path="/profile" element={<Profile />} />
               <Route element={<ProtectedRoute requireRoles={["admin"]}><AppShell /></ProtectedRoute>}>
                 <Route path="/admin/users" element={<AdminUsers />} />
