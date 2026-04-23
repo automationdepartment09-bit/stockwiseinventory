@@ -50,7 +50,8 @@ const Items = () => {
   const [withdrawQty, setWithdrawQty] = useState<string>("1");
   const [withdrawReason, setWithdrawReason] = useState<string>("");
   const [withdrawing, setWithdrawing] = useState(false);
-  const [addItem, setAddItem] = useState<Item | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addItemId, setAddItemId] = useState<string>("");
   const [addWh, setAddWh] = useState<string>("");
   const [addQty, setAddQty] = useState<string>("1");
   const [addReason, setAddReason] = useState<string>("");
@@ -137,22 +138,23 @@ const Items = () => {
     setOpen(false); load();
   };
 
-  const openAdd = (it: Item) => {
-    setAddItem(it);
+  const openAdd = (it?: Item) => {
+    setAddItemId(it?.id ?? "");
     setAddWh(warehouses[0]?.id ?? "");
     setAddQty("1");
     setAddReason("");
+    setAddOpen(true);
   };
 
   const submitAdd = async () => {
-    if (!addItem) return;
+    if (!addItemId) return toast.error("Select an item");
     const qty = Number(addQty);
     if (!addWh) return toast.error("Select a warehouse");
     if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
     if (!user?.id) return toast.error("Not signed in");
     setRequesting(true);
     const { error } = await supabase.from("stock_requests").insert({
-      item_id: addItem.id,
+      item_id: addItemId,
       warehouse_id: addWh,
       quantity: qty,
       reason: addReason.trim() || null,
@@ -161,7 +163,7 @@ const Items = () => {
     setRequesting(false);
     if (error) return toast.error(error.message);
     toast.success("Request submitted — pending approval");
-    setAddItem(null);
+    setAddOpen(false);
   };
 
   const openWithdraw = (it: Item) => {
@@ -206,6 +208,7 @@ const Items = () => {
         actions={
           <>
             <Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button>
+            <Button variant="outline" onClick={() => openAdd()}><PackagePlus className="mr-2 h-4 w-4" />Add stock</Button>
             {canEdit && (
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
@@ -313,9 +316,6 @@ const Items = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openAdd(it)}>
-                          <PackagePlus className="mr-1 h-3.5 w-3.5" />Add stock
-                        </Button>
                         {canWithdraw && (
                           <Button
                             size="sm"
@@ -383,41 +383,51 @@ const Items = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!addItem} onOpenChange={(o) => !o && setAddItem(null)}>
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Request stock addition</DialogTitle>
             <DialogDescription>
-              {addItem ? <>Item: <span className="font-medium">{addItem.name}</span> <span className="font-mono text-xs text-muted-foreground">({addItem.sku})</span></> : null}
-              <div className="mt-1 text-xs">Requires admin or manager approval before stock is added.</div>
+              Requires admin or manager approval before stock is added.
             </DialogDescription>
           </DialogHeader>
-          {addItem && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Warehouse</Label>
-                <Select value={addWh} onValueChange={setAddWh}>
-                  <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
-                  <SelectContent>
-                    {warehouses.map((w) => {
-                      const q = (stockByWh.get(addItem.id) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0;
-                      return <SelectItem key={w.id} value={w.id}>{w.name} — {q} on hand</SelectItem>;
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Quantity to add</Label>
-                <Input type="number" min="1" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Reason / source (optional)</Label>
-                <Input value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
-              </div>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Item</Label>
+              <Select value={addItemId} onValueChange={setAddItemId}>
+                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
+                <SelectContent>
+                  {items.map((it) => (
+                    <SelectItem key={it.id} value={it.id}>
+                      {it.name} <span className="ml-1 font-mono text-xs text-muted-foreground">({it.sku})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            <div className="space-y-1.5">
+              <Label>Warehouse</Label>
+              <Select value={addWh} onValueChange={setAddWh}>
+                <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                <SelectContent>
+                  {warehouses.map((w) => {
+                    const q = addItemId ? ((stockByWh.get(addItemId) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0) : 0;
+                    return <SelectItem key={w.id} value={w.id}>{w.name}{addItemId ? ` — ${q} on hand` : ""}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Quantity to add</Label>
+              <Input type="number" min="1" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Reason / source (optional)</Label>
+              <Input value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
+            </div>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddItem(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button onClick={submitAdd} disabled={requesting}>
               {requesting ? "Submitting…" : "Submit for approval"}
             </Button>
