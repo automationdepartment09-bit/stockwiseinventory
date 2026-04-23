@@ -1,0 +1,1 @@
+CREATE POLICY "Admins delete audit" ON public.audit_log FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'::app_role));
