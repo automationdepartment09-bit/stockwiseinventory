@@ -147,7 +147,7 @@ const Requests = () => {
       />
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
+          <TabsTrigger value="pending">Open</TabsTrigger>
           <TabsTrigger value="mine">My requests</TabsTrigger>
           <TabsTrigger value="all">All</TabsTrigger>
         </TabsList>
