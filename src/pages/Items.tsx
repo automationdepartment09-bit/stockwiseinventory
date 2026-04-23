@@ -323,7 +323,12 @@ const Items = () => {
                     <TableCell className="font-mono text-xs">{it.sku}</TableCell>
                     <TableCell className="font-medium">{it.name}</TableCell>
                     <TableCell>{cat ? <Badge variant="outline">{cat.name}</Badge> : "—"}</TableCell>
-                    <TableCell className="text-right">{stock}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="font-medium">{stock}</div>
+                      {warehouseFilter !== "all" && (
+                        <div className="text-[10px] text-muted-foreground">overall: {overall}</div>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">₱{Number(it.unit_price).toFixed(2)}</TableCell>
                     <TableCell>
                       {low ? <Badge variant="destructive">Low</Badge> : <Badge variant="outline" className="border-primary/50 text-primary">OK</Badge>}
