@@ -163,6 +163,8 @@ const Items = () => {
     toast.success("Request submitted — pending approval");
     setAddItem(null);
   };
+
+  const openWithdraw = (it: Item) => {
     setWithdrawItem(it);
     const rows = stockByWh.get(it.id) ?? [];
     const firstWithStock = rows.find((r) => r.quantity > 0);
