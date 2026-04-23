@@ -70,7 +70,7 @@ const Analytics = () => {
                 <Pie data={byCategory} dataKey="value" nameKey="name" outerRadius={100} innerRadius={60} paddingAngle={3}>
                   {byCategory.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
-                <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} formatter={(v:any)=>`$${Number(v).toLocaleString()}`} />
+                <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} formatter={(v:any)=>`₱${Number(v).toLocaleString()}`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -88,7 +88,7 @@ const Analytics = () => {
                 <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
                 <Legend />
                 <Bar dataKey="qty" name="Units" fill="hsl(var(--primary))" radius={[6,6,0,0]} />
-                <Bar dataKey="value" name="Value $" fill="hsl(var(--secondary))" radius={[6,6,0,0]} />
+                <Bar dataKey="value" name="Value ₱" fill="hsl(var(--secondary))" radius={[6,6,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

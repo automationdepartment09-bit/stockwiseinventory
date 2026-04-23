@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowUpDown, Download, Plus, Search } from "lucide-react";
+import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
 type SortField = "name" | "sku" | "stock" | "unit_price" | "created_at";
@@ -26,13 +26,18 @@ interface Item {
   is_active: boolean; created_at: string;
 }
 interface Category { id: string; name: string; sku_prefix: string }
+interface Warehouse { id: string; name: string }
+interface StockRow { item_id: string; warehouse_id: string; quantity: number }
 
 const Items = () => {
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const canEdit = hasRole("admin", "manager");
+  const canWithdraw = hasRole("admin", "manager", "staff");
   const [params, setParams] = useSearchParams();
   const [items, setItems] = useState<Item[]>([]);
   const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
+  const [stockByWh, setStockByWh] = useState<Map<string, StockRow[]>>(new Map());
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState(params.get("q") ?? "");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -40,18 +45,32 @@ const Items = () => {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [withdrawItem, setWithdrawItem] = useState<Item | null>(null);
+  const [withdrawWh, setWithdrawWh] = useState<string>("");
+  const [withdrawQty, setWithdrawQty] = useState<string>("1");
+  const [withdrawReason, setWithdrawReason] = useState<string>("");
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const load = async () => {
-    const [{ data: its }, { data: lvls }, { data: cats }] = await Promise.all([
+    const [{ data: its }, { data: lvls }, { data: cats }, { data: whs }] = await Promise.all([
       supabase.from("items").select("*"),
-      supabase.from("stock_levels").select("item_id, quantity"),
+      supabase.from("stock_levels").select("item_id, warehouse_id, quantity"),
       supabase.from("categories").select("id, name, sku_prefix"),
+      supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
     ]);
     setItems((its ?? []) as Item[]);
     const m = new Map<string, number>();
-    (lvls ?? []).forEach((l: any) => m.set(l.item_id, (m.get(l.item_id) ?? 0) + l.quantity));
+    const byWh = new Map<string, StockRow[]>();
+    (lvls ?? []).forEach((l: any) => {
+      m.set(l.item_id, (m.get(l.item_id) ?? 0) + l.quantity);
+      const arr = byWh.get(l.item_id) ?? [];
+      arr.push(l as StockRow);
+      byWh.set(l.item_id, arr);
+    });
     setStockMap(m);
+    setStockByWh(byWh);
     setCategories((cats ?? []) as Category[]);
+    setWarehouses((whs ?? []) as Warehouse[]);
   };
   useEffect(() => { load(); }, []);
   useEffect(() => { setSearch(params.get("q") ?? ""); }, [params]);
@@ -111,6 +130,40 @@ const Items = () => {
     if (error) return toast.error(error.message);
     toast.success("Item created — SKU auto-generated");
     setOpen(false); load();
+  };
+
+  const openWithdraw = (it: Item) => {
+    setWithdrawItem(it);
+    const rows = stockByWh.get(it.id) ?? [];
+    const firstWithStock = rows.find((r) => r.quantity > 0);
+    setWithdrawWh(firstWithStock?.warehouse_id ?? rows[0]?.warehouse_id ?? "");
+    setWithdrawQty("1");
+    setWithdrawReason("");
+  };
+
+  const submitWithdraw = async () => {
+    if (!withdrawItem) return;
+    const qty = Number(withdrawQty);
+    if (!withdrawWh) return toast.error("Select a warehouse");
+    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
+    const available = (stockByWh.get(withdrawItem.id) ?? []).find((r) => r.warehouse_id === withdrawWh)?.quantity ?? 0;
+    if (qty > available) return toast.error(`Only ${available} available in this warehouse`);
+    setWithdrawing(true);
+    const { error } = await supabase.from("stock_movements").insert({
+      item_id: withdrawItem.id,
+      movement_type: "out",
+      quantity: qty,
+      from_warehouse_id: withdrawWh,
+      to_warehouse_id: null,
+      reason: withdrawReason.trim() || "Withdrawal",
+      reference: null,
+      created_by: user?.id,
+    });
+    setWithdrawing(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Withdrew ${qty} × ${withdrawItem.name}`);
+    setWithdrawItem(null);
+    load();
   };
 
   return (
@@ -208,6 +261,7 @@ const Items = () => {
                 <TableHead className="text-right"><SortBtn label="Stock" field="stock" current={sortField} dir={sortDir} onClick={toggleSort} /></TableHead>
                 <TableHead className="text-right"><SortBtn label="Price" field="unit_price" current={sortField} dir={sortDir} onClick={toggleSort} /></TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -221,20 +275,76 @@ const Items = () => {
                     <TableCell className="font-medium">{it.name}</TableCell>
                     <TableCell>{cat ? <Badge variant="outline">{cat.name}</Badge> : "—"}</TableCell>
                     <TableCell className="text-right">{stock}</TableCell>
-                    <TableCell className="text-right">${Number(it.unit_price).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">₱{Number(it.unit_price).toFixed(2)}</TableCell>
                     <TableCell>
                       {low ? <Badge variant="destructive">Low</Badge> : <Badge variant="outline" className="border-primary/50 text-primary">OK</Badge>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {canWithdraw && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={stock <= 0}
+                          onClick={() => openWithdraw(it)}
+                        >
+                          <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
               })}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">No items found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No items found.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!withdrawItem} onOpenChange={(o) => !o && setWithdrawItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Withdraw stock</DialogTitle>
+            <DialogDescription>
+              {withdrawItem ? <>Item: <span className="font-medium">{withdrawItem.name}</span> <span className="font-mono text-xs text-muted-foreground">({withdrawItem.sku})</span></> : null}
+            </DialogDescription>
+          </DialogHeader>
+          {withdrawItem && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>From warehouse</Label>
+                <Select value={withdrawWh} onValueChange={setWithdrawWh}>
+                  <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map((w) => {
+                      const q = (stockByWh.get(withdrawItem.id) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0;
+                      return <SelectItem key={w.id} value={w.id} disabled={q <= 0}>{w.name} — {q} on hand</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Quantity</Label>
+                <Input type="number" min="1" value={withdrawQty} onChange={(e) => setWithdrawQty(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reason (optional)</Label>
+                <Input value={withdrawReason} onChange={(e) => setWithdrawReason(e.target.value)} placeholder="Sale, damage, internal use…" maxLength={200} />
+              </div>
+              <div className="rounded-md border border-border bg-muted/30 p-2 text-xs text-muted-foreground">
+                Estimated value: <span className="font-medium text-foreground">₱{(Number(withdrawItem.unit_price) * (Number(withdrawQty) || 0)).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWithdrawItem(null)}>Cancel</Button>
+            <Button onClick={submitWithdraw} disabled={withdrawing}>
+              {withdrawing ? "Withdrawing…" : "Confirm withdrawal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
