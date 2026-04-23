@@ -11,15 +11,45 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Check, X, Plus } from "lucide-react";
+import { Check, X, Plus, Truck, PackageCheck, PackageOpen } from "lucide-react";
 import { toast } from "sonner";
+
+type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 
 interface Req {
   id: string; item_id: string; warehouse_id: string; quantity: number;
-  reason: string | null; status: "pending" | "approved" | "rejected";
+  reason: string | null; status: ReqStatus;
   requested_by: string; reviewed_by: string | null; review_note: string | null;
   reviewed_at: string | null; created_at: string;
 }
+
+const STATUS_LABEL: Record<ReqStatus, string> = {
+  pending: "Pending",
+  approved: "Approved",
+  rejected: "Rejected",
+  on_arrival: "On arrival",
+  arrived: "Arrived",
+  received: "Received",
+};
+
+const statusBadgeClass: Record<ReqStatus, string> = {
+  pending: "",
+  approved: "bg-primary/20 text-primary",
+  rejected: "",
+  on_arrival: "bg-warning/20 text-warning",
+  arrived: "bg-accent/30 text-accent-foreground",
+  received: "bg-success/20 text-success",
+};
+
+// Allowed forward transitions (reviewers/managers only)
+const NEXT_STATUSES: Record<ReqStatus, ReqStatus[]> = {
+  pending: ["approved", "rejected"],
+  approved: ["on_arrival", "rejected"],
+  on_arrival: ["arrived"],
+  arrived: ["received"],
+  received: [],
+  rejected: [],
+};
 
 const Requests = () => {
   const { user, hasRole } = useAuth();
