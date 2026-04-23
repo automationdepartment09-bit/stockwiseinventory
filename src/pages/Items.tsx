@@ -82,6 +82,11 @@ const Items = () => {
   useEffect(() => { load(); }, []);
   useEffect(() => { setSearch(params.get("q") ?? ""); }, [params]);
 
+  const stockFor = (itemId: string) => {
+    if (warehouseFilter === "all") return stockMap.get(itemId) ?? 0;
+    return (stockByWh.get(itemId) ?? []).find((r) => r.warehouse_id === warehouseFilter)?.quantity ?? 0;
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = items.filter((it) => {
@@ -91,14 +96,14 @@ const Items = () => {
     });
     list = [...list].sort((a, b) => {
       let av: any = a[sortField as keyof Item]; let bv: any = b[sortField as keyof Item];
-      if (sortField === "stock") { av = stockMap.get(a.id) ?? 0; bv = stockMap.get(b.id) ?? 0; }
+      if (sortField === "stock") { av = stockFor(a.id); bv = stockFor(b.id); }
       if (typeof av === "string") { av = av.toLowerCase(); bv = (bv as string).toLowerCase(); }
       if (av < bv) return sortDir === "asc" ? -1 : 1;
       if (av > bv) return sortDir === "asc" ? 1 : -1;
       return 0;
     });
     return list;
-  }, [items, search, categoryFilter, sortField, sortDir, stockMap]);
+  }, [items, search, categoryFilter, warehouseFilter, sortField, sortDir, stockMap, stockByWh]);
 
   const toggleSort = (f: SortField) => {
     if (sortField === f) setSortDir(sortDir === "asc" ? "desc" : "asc");
