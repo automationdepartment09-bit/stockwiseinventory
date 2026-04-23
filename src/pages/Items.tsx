@@ -132,6 +132,40 @@ const Items = () => {
     setOpen(false); load();
   };
 
+  const openWithdraw = (it: Item) => {
+    setWithdrawItem(it);
+    const rows = stockByWh.get(it.id) ?? [];
+    const firstWithStock = rows.find((r) => r.quantity > 0);
+    setWithdrawWh(firstWithStock?.warehouse_id ?? rows[0]?.warehouse_id ?? "");
+    setWithdrawQty("1");
+    setWithdrawReason("");
+  };
+
+  const submitWithdraw = async () => {
+    if (!withdrawItem) return;
+    const qty = Number(withdrawQty);
+    if (!withdrawWh) return toast.error("Select a warehouse");
+    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
+    const available = (stockByWh.get(withdrawItem.id) ?? []).find((r) => r.warehouse_id === withdrawWh)?.quantity ?? 0;
+    if (qty > available) return toast.error(`Only ${available} available in this warehouse`);
+    setWithdrawing(true);
+    const { error } = await supabase.from("stock_movements").insert({
+      item_id: withdrawItem.id,
+      movement_type: "out",
+      quantity: qty,
+      from_warehouse_id: withdrawWh,
+      to_warehouse_id: null,
+      reason: withdrawReason.trim() || "Withdrawal",
+      reference: null,
+      created_by: user?.id,
+    });
+    setWithdrawing(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Withdrew ${qty} × ${withdrawItem.name}`);
+    setWithdrawItem(null);
+    load();
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -227,6 +261,7 @@ const Items = () => {
                 <TableHead className="text-right"><SortBtn label="Stock" field="stock" current={sortField} dir={sortDir} onClick={toggleSort} /></TableHead>
                 <TableHead className="text-right"><SortBtn label="Price" field="unit_price" current={sortField} dir={sortDir} onClick={toggleSort} /></TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -244,11 +279,23 @@ const Items = () => {
                     <TableCell>
                       {low ? <Badge variant="destructive">Low</Badge> : <Badge variant="outline" className="border-primary/50 text-primary">OK</Badge>}
                     </TableCell>
+                    <TableCell className="text-right">
+                      {canWithdraw && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={stock <= 0}
+                          onClick={() => openWithdraw(it)}
+                        >
+                          <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">No items found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No items found.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
