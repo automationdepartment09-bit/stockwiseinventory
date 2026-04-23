@@ -6,9 +6,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Check, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface Req {
@@ -24,23 +27,35 @@ const Requests = () => {
   const [rows, setRows] = useState<Req[]>([]);
   const [items, setItems] = useState<Record<string, { name: string; sku: string }>>({});
   const [whs, setWhs] = useState<Record<string, string>>({});
+  const [itemList, setItemList] = useState<{ id: string; name: string; sku: string }[]>([]);
+  const [whList, setWhList] = useState<{ id: string; name: string }[]>([]);
   const [tab, setTab] = useState<"pending" | "all" | "mine">("pending");
   const [noteFor, setNoteFor] = useState<string | null>(null);
   const [note, setNote] = useState("");
 
+  // New request dialog
+  const [openNew, setOpenNew] = useState(false);
+  const [reqItem, setReqItem] = useState("");
+  const [reqWh, setReqWh] = useState("");
+  const [reqQty, setReqQty] = useState("1");
+  const [reqReason, setReqReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   const load = async () => {
     const [{ data: rs }, { data: its }, { data: ws }] = await Promise.all([
       supabase.from("stock_requests").select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("items").select("id, name, sku"),
-      supabase.from("warehouses").select("id, name"),
+      supabase.from("items").select("id, name, sku").order("name"),
+      supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
     ]);
     setRows((rs ?? []) as Req[]);
     const im: Record<string, { name: string; sku: string }> = {};
     (its ?? []).forEach((i: any) => { im[i.id] = { name: i.name, sku: i.sku }; });
     setItems(im);
+    setItemList((its ?? []) as any);
     const wm: Record<string, string> = {};
     (ws ?? []).forEach((w: any) => { wm[w.id] = w.name; });
     setWhs(wm);
+    setWhList((ws ?? []) as any);
   };
   useEffect(() => { load(); }, []);
 
@@ -61,9 +76,44 @@ const Requests = () => {
     load();
   };
 
+  const openRequest = () => {
+    setReqItem(itemList[0]?.id ?? "");
+    setReqWh(whList[0]?.id ?? "");
+    setReqQty("1");
+    setReqReason("");
+    setOpenNew(true);
+  };
+
+  const submitRequest = async () => {
+    const qty = Number(reqQty);
+    if (!reqItem) return toast.error("Select an item");
+    if (!reqWh) return toast.error("Select a warehouse");
+    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
+    if (!user?.id) return toast.error("Not signed in");
+    setSubmitting(true);
+    const { error } = await supabase.from("stock_requests").insert({
+      item_id: reqItem,
+      warehouse_id: reqWh,
+      quantity: qty,
+      reason: reqReason.trim() || null,
+      requested_by: user.id,
+    });
+    setSubmitting(false);
+    if (error) return toast.error(error.message);
+    toast.success("Request submitted — pending approval");
+    setOpenNew(false);
+    load();
+  };
+
   return (
     <div className="space-y-4">
-      <PageHeader title="Stock requests" description="Review and approve incoming stock additions per warehouse." />
+      <PageHeader
+        title="Stock requests"
+        description="Review and approve incoming stock additions per warehouse."
+        actions={
+          <Button onClick={openRequest}><Plus className="mr-2 h-4 w-4" />New request</Button>
+        }
+      />
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
           <TabsTrigger value="pending">Pending</TabsTrigger>
@@ -127,6 +177,51 @@ const Requests = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={openNew} onOpenChange={setOpenNew}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New stock request</DialogTitle>
+            <DialogDescription>Requires admin or manager approval before stock is added.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Item</Label>
+              <Select value={reqItem} onValueChange={setReqItem}>
+                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
+                <SelectContent>
+                  {itemList.map((it) => (
+                    <SelectItem key={it.id} value={it.id}>
+                      {it.name} <span className="ml-1 font-mono text-xs text-muted-foreground">({it.sku})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Warehouse</Label>
+              <Select value={reqWh} onValueChange={setReqWh}>
+                <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
+                <SelectContent>
+                  {whList.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Quantity</Label>
+              <Input type="number" min="1" value={reqQty} onChange={(e) => setReqQty(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Reason / source (optional)</Label>
+              <Input value={reqReason} onChange={(e) => setReqReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenNew(false)}>Cancel</Button>
+            <Button onClick={submitRequest} disabled={submitting}>{submitting ? "Submitting…" : "Submit for approval"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
