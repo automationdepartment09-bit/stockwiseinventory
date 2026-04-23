@@ -314,8 +314,9 @@ const Items = () => {
             </TableHeader>
             <TableBody>
               {filtered.map((it) => {
-                const stock = stockMap.get(it.id) ?? 0;
-                const low = it.reorder_level > 0 && stock <= it.reorder_level;
+                const stock = stockFor(it.id);
+                const overall = stockMap.get(it.id) ?? 0;
+                const low = it.reorder_level > 0 && overall <= it.reorder_level;
                 const cat = categories.find((c) => c.id === it.category_id);
                 return (
                   <TableRow key={it.id}>
