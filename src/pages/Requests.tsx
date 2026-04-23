@@ -95,13 +95,16 @@ const Requests = () => {
     return true;
   });
 
-  const review = async (id: string, status: "approved" | "rejected") => {
-    const { error } = await supabase
-      .from("stock_requests")
-      .update({ status, reviewed_by: user?.id, review_note: note || null, reviewed_at: new Date().toISOString() })
-      .eq("id", id);
+  const review = async (id: string, status: ReqStatus) => {
+    const patch: Record<string, unknown> = { status };
+    if (["approved", "rejected"].includes(status)) {
+      patch.reviewed_by = user?.id;
+      patch.review_note = note || null;
+      patch.reviewed_at = new Date().toISOString();
+    }
+    const { error } = await supabase.from("stock_requests").update(patch).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success(`Request ${status}`);
+    toast.success(`Marked as ${STATUS_LABEL[status].toLowerCase()}`);
     setNoteFor(null); setNote("");
     load();
   };
