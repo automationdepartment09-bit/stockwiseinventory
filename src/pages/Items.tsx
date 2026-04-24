@@ -14,8 +14,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus } from "lucide-react";
+import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type SortField = "name" | "sku" | "stock" | "unit_price" | "created_at";
 type SortDir = "asc" | "desc";
@@ -33,6 +37,7 @@ const Items = () => {
   const { user, hasRole } = useAuth();
   const canEdit = hasRole("admin", "manager");
   const canWithdraw = hasRole("admin", "manager", "staff");
+  const canDelete = hasRole("admin");
   const [params, setParams] = useSearchParams();
   const [items, setItems] = useState<Item[]>([]);
   const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
@@ -57,6 +62,19 @@ const Items = () => {
   const [addQty, setAddQty] = useState<string>("1");
   const [addReason, setAddReason] = useState<string>("");
   const [requesting, setRequesting] = useState(false);
+  const [toDelete, setToDelete] = useState<Item | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    const { error } = await supabase.from("items").delete().eq("id", toDelete.id);
+    setDeleting(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Deleted ${toDelete.name}`);
+    setToDelete(null);
+    load();
+  };
 
   const load = async () => {
     const [{ data: its }, { data: lvls }, { data: cats }, { data: whs }] = await Promise.all([
@@ -345,6 +363,16 @@ const Items = () => {
                             <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
                           </Button>
                         )}
+                        {canDelete && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setToDelete(it)}
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" />Delete
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -453,6 +481,23 @@ const Items = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {toDelete ? <>This permanently deletes <span className="font-medium">{toDelete.name}</span> ({toDelete.sku}). This action cannot be undone.</> : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
