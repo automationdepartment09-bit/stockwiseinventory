@@ -209,7 +209,7 @@ const Movements = () => {
           </div>
           <Table>
             <TableHeader>
-              <TableRow><TableHead>When</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead></TableRow>
+              <TableRow><TableHead>When</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead>{canDelete && <TableHead className="text-right">Actions</TableHead>}</TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((m) => {
