@@ -232,10 +232,22 @@ const Movements = () => {
                             : <Badge className={statusBadgeClass[s.status]}>{STATUS_LABEL[s.status]}</Badge>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{m.reason ?? ""}{m.reference ? ` (${m.reference})` : ""}</TableCell>
+                    {canDelete && (
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setToDelete(m)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}
-              {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
+              {filtered.length === 0 && <TableRow><TableCell colSpan={canDelete ? 8 : 7} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
