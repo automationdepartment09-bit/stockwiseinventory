@@ -14,8 +14,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus } from "lucide-react";
+import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type SortField = "name" | "sku" | "stock" | "unit_price" | "created_at";
 type SortDir = "asc" | "desc";
