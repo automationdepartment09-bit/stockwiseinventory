@@ -363,6 +363,16 @@ const Items = () => {
                             <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
                           </Button>
                         )}
+                        {canDelete && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setToDelete(it)}
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" />Delete
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
