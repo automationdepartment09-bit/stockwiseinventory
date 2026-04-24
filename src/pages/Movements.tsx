@@ -10,8 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowRightLeft, ArrowUp, Plus, Sliders } from "lucide-react";
+import { ArrowDown, ArrowRightLeft, ArrowUp, Plus, Sliders, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Move { id: string; movement_type: "in"|"out"|"transfer"|"adjustment"; quantity: number; reason: string|null; reference: string|null; created_at: string; item_id: string; from_warehouse_id: string|null; to_warehouse_id: string|null }
 
@@ -42,6 +46,7 @@ const STATUS_FILTER_VALUES: Array<"all" | "manual" | ReqStatus> = [
 const Movements = () => {
   const { user, hasRole } = useAuth();
   const canCreate = hasRole("admin", "manager", "staff");
+  const canDelete = hasRole("admin");
   const [moves, setMoves] = useState<Move[]>([]);
   const [items, setItems] = useState<{id:string;name:string;sku:string}[]>([]);
   const [warehouses, setWarehouses] = useState<{id:string;name:string}[]>([]);
@@ -49,6 +54,19 @@ const Movements = () => {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"in"|"out"|"transfer"|"adjustment">("in");
   const [statusFilter, setStatusFilter] = useState<"all" | "manual" | ReqStatus>("all");
+  const [toDelete, setToDelete] = useState<Move | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    const { error } = await supabase.from("stock_movements").delete().eq("id", toDelete.id);
+    setDeleting(false);
+    if (error) return toast.error(error.message);
+    toast.success("Movement deleted");
+    setToDelete(null);
+    load();
+  };
 
   const load = async () => {
     const [{ data: m }, { data: it }, { data: wh }, { data: rq }] = await Promise.all([
@@ -191,7 +209,7 @@ const Movements = () => {
           </div>
           <Table>
             <TableHeader>
-              <TableRow><TableHead>When</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead></TableRow>
+              <TableRow><TableHead>When</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead>{canDelete && <TableHead className="text-right">Actions</TableHead>}</TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((m) => {
@@ -214,14 +232,43 @@ const Movements = () => {
                             : <Badge className={statusBadgeClass[s.status]}>{STATUS_LABEL[s.status]}</Badge>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{m.reason ?? ""}{m.reference ? ` (${m.reference})` : ""}</TableCell>
+                    {canDelete && (
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setToDelete(m)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}
-              {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
+              {filtered.length === 0 && <TableRow><TableCell colSpan={canDelete ? 8 : 7} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete movement?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the movement record. Stock levels are not automatically reverted — adjust manually if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

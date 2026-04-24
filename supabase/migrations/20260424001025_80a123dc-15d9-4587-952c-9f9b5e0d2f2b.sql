@@ -1,0 +1,1 @@
+CREATE POLICY "Admins delete movements" ON public.stock_movements FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'::app_role));
