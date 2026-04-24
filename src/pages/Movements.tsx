@@ -46,6 +46,7 @@ const STATUS_FILTER_VALUES: Array<"all" | "manual" | ReqStatus> = [
 const Movements = () => {
   const { user, hasRole } = useAuth();
   const canCreate = hasRole("admin", "manager", "staff");
+  const canDelete = hasRole("admin");
   const [moves, setMoves] = useState<Move[]>([]);
   const [items, setItems] = useState<{id:string;name:string;sku:string}[]>([]);
   const [warehouses, setWarehouses] = useState<{id:string;name:string}[]>([]);
@@ -53,6 +54,19 @@ const Movements = () => {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"in"|"out"|"transfer"|"adjustment">("in");
   const [statusFilter, setStatusFilter] = useState<"all" | "manual" | ReqStatus>("all");
+  const [toDelete, setToDelete] = useState<Move | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    const { error } = await supabase.from("stock_movements").delete().eq("id", toDelete.id);
+    setDeleting(false);
+    if (error) return toast.error(error.message);
+    toast.success("Movement deleted");
+    setToDelete(null);
+    load();
+  };
 
   const load = async () => {
     const [{ data: m }, { data: it }, { data: wh }, { data: rq }] = await Promise.all([
