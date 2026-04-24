@@ -62,6 +62,19 @@ const Items = () => {
   const [addQty, setAddQty] = useState<string>("1");
   const [addReason, setAddReason] = useState<string>("");
   const [requesting, setRequesting] = useState(false);
+  const [toDelete, setToDelete] = useState<Item | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    const { error } = await supabase.from("items").delete().eq("id", toDelete.id);
+    setDeleting(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Deleted ${toDelete.name}`);
+    setToDelete(null);
+    load();
+  };
 
   const load = async () => {
     const [{ data: its }, { data: lvls }, { data: cats }, { data: whs }] = await Promise.all([
