@@ -37,6 +37,7 @@ const Items = () => {
   const { user, hasRole } = useAuth();
   const canEdit = hasRole("admin", "manager");
   const canWithdraw = hasRole("admin", "manager", "staff");
+  const canDelete = hasRole("admin");
   const [params, setParams] = useSearchParams();
   const [items, setItems] = useState<Item[]>([]);
   const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
