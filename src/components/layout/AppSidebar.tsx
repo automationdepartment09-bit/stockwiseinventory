@@ -1,4 +1,4 @@
-import { Boxes, LayoutDashboard, Package, Tag, Warehouse, ArrowLeftRight, BarChart3, Users, ShieldCheck, ScrollText, Bell, Settings, ClipboardCheck } from "lucide-react";
+import { Boxes, LayoutDashboard, Package, Tag, Warehouse, ArrowLeftRight, BarChart3, Users, ShieldCheck, ScrollText, Bell, Settings, ClipboardCheck, Layers, MessageSquare } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -20,8 +20,10 @@ const mainItems = [
   { title: "Items", url: "/items", icon: Package },
   { title: "Categories", url: "/categories", icon: Tag },
   { title: "Warehouses", url: "/warehouses", icon: Warehouse },
+  { title: "Stock", url: "/stock", icon: Layers },
   { title: "Movements", url: "/movements", icon: ArrowLeftRight },
   { title: "Requests", url: "/requests", icon: ClipboardCheck },
+  { title: "Chat", url: "/chat", icon: MessageSquare },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Notifications", url: "/notifications", icon: Bell },
 ];

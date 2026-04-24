@@ -195,6 +195,7 @@ export type Database = {
           id: string
           item_id: string
           quantity: number
+          status: Database["public"]["Enums"]["stock_status"]
           updated_at: string
           warehouse_id: string
         }
@@ -202,6 +203,7 @@ export type Database = {
           id?: string
           item_id: string
           quantity?: number
+          status?: Database["public"]["Enums"]["stock_status"]
           updated_at?: string
           warehouse_id: string
         }
@@ -209,6 +211,7 @@ export type Database = {
           id?: string
           item_id?: string
           quantity?: number
+          status?: Database["public"]["Enums"]["stock_status"]
           updated_at?: string
           warehouse_id?: string
         }
@@ -350,6 +353,105 @@ export type Database = {
           },
         ]
       }
+      telegram_bot_state: {
+        Row: {
+          id: number
+          update_offset: number
+          updated_at: string
+        }
+        Insert: {
+          id: number
+          update_offset?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          update_offset?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      telegram_chats: {
+        Row: {
+          chat_id: number
+          created_at: string
+          created_by: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      telegram_messages: {
+        Row: {
+          attachment_name: string | null
+          attachment_type: string | null
+          attachment_url: string | null
+          chat_id: number
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          direction: string
+          id: string
+          message_id: number | null
+          raw: Json | null
+          sender_name: string | null
+          sender_user_id: string | null
+          telegram_file_id: string | null
+          text: string | null
+          update_id: number | null
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
+          chat_id: number
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          direction: string
+          id?: string
+          message_id?: number | null
+          raw?: Json | null
+          sender_name?: string | null
+          sender_user_id?: string | null
+          telegram_file_id?: string | null
+          text?: string | null
+          update_id?: number | null
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_type?: string | null
+          attachment_url?: string | null
+          chat_id?: number
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          direction?: string
+          id?: string
+          message_id?: number | null
+          raw?: Json | null
+          sender_name?: string | null
+          sender_user_id?: string | null
+          telegram_file_id?: string | null
+          text?: string | null
+          update_id?: number | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -428,6 +530,12 @@ export type Database = {
         | "on_arrival"
         | "arrived"
         | "received"
+      stock_status:
+        | "available"
+        | "reserved"
+        | "on_arrival"
+        | "arrived"
+        | "damaged"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -564,6 +672,13 @@ export const Constants = {
         "on_arrival",
         "arrived",
         "received",
+      ],
+      stock_status: [
+        "available",
+        "reserved",
+        "on_arrival",
+        "arrived",
+        "damaged",
       ],
     },
   },
