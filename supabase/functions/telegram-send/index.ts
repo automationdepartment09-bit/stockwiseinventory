@@ -71,8 +71,9 @@ Deno.serve(async (req) => {
     });
     const tgData = await tgRes.json();
     if (!tgRes.ok || !tgData.ok) {
-      return new Response(JSON.stringify({ error: "Telegram error", details: tgData }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const desc = tgData?.description || `Telegram error ${tgRes.status}`;
+      return new Response(JSON.stringify({ error: desc, details: tgData }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
