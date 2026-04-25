@@ -78,6 +78,29 @@ const Items = () => {
     load();
   };
 
+  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editItem) return;
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      name: String(fd.get("name") ?? "").trim(),
+      description: String(fd.get("description") ?? "").trim() || null,
+      category_id: String(fd.get("category_id") ?? "") || null,
+      unit_price: Number(fd.get("unit_price") ?? 0),
+      cost_price: Number(fd.get("cost_price") ?? 0),
+      reorder_level: Number(fd.get("reorder_level") ?? 0),
+      is_active: String(fd.get("is_active") ?? "true") === "true",
+    };
+    if (!payload.name) return toast.error("Name required");
+    setEditing(true);
+    const { error } = await supabase.from("items").update(payload).eq("id", editItem.id);
+    setEditing(false);
+    if (error) return toast.error(error.message);
+    toast.success("Item updated");
+    setEditItem(null);
+    load();
+  };
+
   const load = async () => {
     const [{ data: its }, { data: lvls }, { data: cats }, { data: whs }] = await Promise.all([
       supabase.from("items").select("*"),
