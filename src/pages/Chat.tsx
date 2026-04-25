@@ -174,16 +174,57 @@ const Chat = () => {
               <RefreshCw className={`mr-2 h-4 w-4 ${polling ? "animate-spin" : ""}`} />Refresh
             </Button>
             {canManage && (
-              <Dialog open={newOpen} onOpenChange={setNewOpen}>
+              <Dialog open={newOpen} onOpenChange={async (o) => {
+                setNewOpen(o);
+                if (o) {
+                  await pollOnce(true);
+                  const { data } = await supabase
+                    .from("telegram_messages")
+                    .select("chat_id, sender_name")
+                    .eq("direction", "in")
+                    .order("created_at", { ascending: false })
+                    .limit(50);
+                  const seen = new Set<number>();
+                  const uniq: { chat_id: number; sender_name: string | null }[] = [];
+                  (data ?? []).forEach((r: any) => {
+                    if (!seen.has(r.chat_id)) { seen.add(r.chat_id); uniq.push(r); }
+                  });
+                  setDiscovered(uniq);
+                }
+              }}>
                 <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Add chat</Button></DialogTrigger>
                 <DialogContent>
                   <DialogHeader><DialogTitle>Add Telegram chat</DialogTitle></DialogHeader>
+                  {discovered.length > 0 && (
+                    <div className="rounded-md border p-2">
+                      <div className="mb-1 text-xs font-medium text-muted-foreground">Detected from incoming messages — click to use</div>
+                      <div className="flex flex-wrap gap-1">
+                        {discovered.map((d) => (
+                          <button
+                            key={d.chat_id}
+                            type="button"
+                            onClick={() => {
+                              const titleEl = document.querySelector<HTMLInputElement>('input[name="title"]');
+                              const idEl = document.querySelector<HTMLInputElement>('input[name="chat_id"]');
+                              if (titleEl) titleEl.value = d.sender_name ?? `Chat ${d.chat_id}`;
+                              if (idEl) idEl.value = String(d.chat_id);
+                            }}
+                            className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+                          >
+                            {d.sender_name ?? "Unknown"} · {d.chat_id}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <form onSubmit={createChat} className="space-y-3">
                     <div className="space-y-1.5"><Label>Display title</Label><Input name="title" required maxLength={100} placeholder="e.g. Warehouse team" /></div>
                     <div className="space-y-1.5">
                       <Label>Telegram chat ID</Label>
                       <Input name="chat_id" required type="number" placeholder="e.g. 123456789 or -1001234567890" />
-                      <p className="text-xs text-muted-foreground">Add the bot to the chat first, then send any message; use the numeric chat ID from Telegram.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Tip: open Telegram, search for your bot, send it any message (or add it to a group), then click Refresh and reopen this dialog — the chat will appear above.
+                      </p>
                     </div>
                     <DialogFooter><Button type="submit">Add</Button></DialogFooter>
                   </form>
