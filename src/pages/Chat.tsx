@@ -44,6 +44,7 @@ const Chat = () => {
   const [polling, setPolling] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Msg | null>(null);
+  const [discovered, setDiscovered] = useState<{ chat_id: number; sender_name: string | null }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
