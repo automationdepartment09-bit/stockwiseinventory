@@ -129,7 +129,7 @@ const Chat = () => {
       attachment = await uploadAttachment(file);
       if (!attachment) { setSending(false); return; }
     }
-    const { error } = await supabase.functions.invoke("telegram-send", {
+    const { data, error } = await supabase.functions.invoke("telegram-send", {
       body: {
         chat_id: active.chat_id,
         text: text.trim() || undefined,
@@ -139,7 +139,12 @@ const Chat = () => {
       },
     });
     setSending(false);
-    if (error) return toast.error(error.message);
+    // Surface real Telegram error (e.g. "chat not found", "bot was blocked")
+    const apiErr = (data as any)?.error || (data as any)?.details?.description;
+    if (error || apiErr) {
+      const msg = apiErr || error?.message || "Failed to send";
+      return toast.error(typeof msg === "string" ? msg : JSON.stringify(msg));
+    }
     setText("");
     if (fileRef.current) fileRef.current.value = "";
   };
