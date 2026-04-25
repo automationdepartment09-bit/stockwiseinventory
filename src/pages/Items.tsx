@@ -516,6 +516,66 @@ const Items = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!editItem} onOpenChange={(o) => !o && setEditItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit item</DialogTitle>
+            <DialogDescription>
+              {editItem ? <>SKU: <span className="font-mono text-xs">{editItem.sku}</span></> : null}
+            </DialogDescription>
+          </DialogHeader>
+          {editItem && (
+            <form onSubmit={handleEdit} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Name</Label>
+                <Input name="name" required maxLength={200} defaultValue={editItem.name} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Category</Label>
+                <Select name="category_id" defaultValue={editItem.category_id ?? undefined}>
+                  <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1.5">
+                  <Label>Unit price</Label>
+                  <Input name="unit_price" type="number" step="0.01" defaultValue={editItem.unit_price} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Cost</Label>
+                  <Input name="cost_price" type="number" step="0.01" defaultValue={editItem.cost_price} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Reorder at</Label>
+                  <Input name="reorder_level" type="number" defaultValue={editItem.reorder_level} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select name="is_active" defaultValue={editItem.is_active ? "true" : "false"}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Description</Label>
+                <Textarea name="description" maxLength={1000} defaultValue={editItem.description ?? ""} />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+                <Button type="submit" disabled={editing}>{editing ? "Saving…" : "Save changes"}</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
