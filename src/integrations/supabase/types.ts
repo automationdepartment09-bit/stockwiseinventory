@@ -500,6 +500,81 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawals: {
+        Row: {
+          attachment_name: string | null
+          attachment_url: string | null
+          created_at: string
+          expected_return_date: string | null
+          id: string
+          item_id: string
+          movement_id: string | null
+          notes: string | null
+          project_reference: string | null
+          purpose: string
+          quantity: number
+          requested_by: string
+          return_expected: boolean
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["withdrawal_status"]
+          updated_at: string
+          warehouse_id: string
+          withdrawal_date: string
+          withdrawn_by_name: string | null
+          withdrawn_by_user_id: string | null
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          created_at?: string
+          expected_return_date?: string | null
+          id?: string
+          item_id: string
+          movement_id?: string | null
+          notes?: string | null
+          project_reference?: string | null
+          purpose: string
+          quantity: number
+          requested_by: string
+          return_expected?: boolean
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          updated_at?: string
+          warehouse_id: string
+          withdrawal_date?: string
+          withdrawn_by_name?: string | null
+          withdrawn_by_user_id?: string | null
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          created_at?: string
+          expected_return_date?: string | null
+          id?: string
+          item_id?: string
+          movement_id?: string | null
+          notes?: string | null
+          project_reference?: string | null
+          purpose?: string
+          quantity?: number
+          requested_by?: string
+          return_expected?: boolean
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["withdrawal_status"]
+          updated_at?: string
+          warehouse_id?: string
+          withdrawal_date?: string
+          withdrawn_by_name?: string | null
+          withdrawn_by_user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -536,6 +611,7 @@ export type Database = {
         | "on_arrival"
         | "arrived"
         | "damaged"
+      withdrawal_status: "pending" | "approved" | "rejected" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -680,6 +756,7 @@ export const Constants = {
         "arrived",
         "damaged",
       ],
+      withdrawal_status: ["pending", "approved", "rejected", "cancelled"],
     },
   },
 } as const
