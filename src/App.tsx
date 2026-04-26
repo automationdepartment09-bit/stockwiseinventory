@@ -49,6 +49,7 @@ const App = () => (
               <Route path="/requests" element={<Requests />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/withdrawals" element={<Withdrawals />} />
+              <Route path="/projects" element={<Projects />} />
               <Route path="/profile" element={<Profile />} />
               <Route element={<ProtectedRoute requireRoles={["admin"]}><AppShell /></ProtectedRoute>}>
                 <Route path="/admin/users" element={<AdminUsers />} />
