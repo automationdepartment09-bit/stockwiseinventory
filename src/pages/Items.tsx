@@ -378,7 +378,7 @@ const Items = () => {
                       {low ? <Badge variant="destructive">Low</Badge> : <Badge variant="outline" className="border-primary/50 text-primary">OK</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                         {canWithdraw && (
                           <Button
                             size="sm"
