@@ -203,12 +203,12 @@ const Stock = () => {
               {filtered.map((r) => {
                 const it = itemMap.get(r.item_id);
                 return (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} onClick={() => openDetail(r)} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="font-mono text-xs">{it?.sku ?? "—"}</TableCell>
                     <TableCell className="font-medium">{it?.name ?? "Unknown"}</TableCell>
                     <TableCell>{whMap.get(r.warehouse_id) ?? "—"}</TableCell>
                     <TableCell className="text-right">{r.quantity}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {canEdit ? (
                         <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v as Status)}>
                           <SelectTrigger className="h-8 w-[150px]"><SelectValue /></SelectTrigger>
