@@ -284,8 +284,20 @@ const Withdrawals = () => {
                       <Input value={fPurpose} onChange={(e) => setFPurpose(e.target.value)} placeholder="What is this for?" required maxLength={300} />
                     </div>
                     <div className="space-y-1.5">
+                      <Label>Project</Label>
+                      <Select value={fProject} onValueChange={setFProject}>
+                        <SelectTrigger><SelectValue placeholder="No project" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— No project —</SelectItem>
+                          {projects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ""}{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label>Project / job reference</Label>
-                      <Input value={fRef} onChange={(e) => setFRef(e.target.value)} placeholder="PO #, ticket, project code" maxLength={120} />
+                      <Input value={fRef} onChange={(e) => setFRef(e.target.value)} placeholder="PO #, ticket, custom ref" maxLength={120} />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="flex items-center gap-2">
