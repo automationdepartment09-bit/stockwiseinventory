@@ -593,6 +593,38 @@ const Items = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{detail?.name}</DialogTitle>
+            <DialogDescription className="font-mono text-xs">{detail?.sku}</DialogDescription>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-3 text-sm">
+              <DRow label="Category">{categories.find((c) => c.id === detail.category_id)?.name ?? "—"}</DRow>
+              <DRow label="Status">{detail.is_active ? <Badge variant="outline" className="border-primary/50 text-primary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}</DRow>
+              <DRow label="Unit price">₱{Number(detail.unit_price).toFixed(2)}</DRow>
+              <DRow label="Cost price">₱{Number(detail.cost_price).toFixed(2)}</DRow>
+              <DRow label="Reorder level">{detail.reorder_level}</DRow>
+              <DRow label="Total stock">{stockMap.get(detail.id) ?? 0}</DRow>
+              {detail.description && <DRow label="Description"><span className="whitespace-pre-wrap">{detail.description}</span></DRow>}
+              <div>
+                <div className="mb-1 text-xs text-muted-foreground">Stock per warehouse</div>
+                <div className="space-y-1">
+                  {(stockByWh.get(detail.id) ?? []).length === 0 && <div className="text-xs text-muted-foreground">No stock anywhere.</div>}
+                  {(stockByWh.get(detail.id) ?? []).map((r) => (
+                    <div key={r.warehouse_id} className="flex items-center justify-between rounded border border-border px-2 py-1">
+                      <span>{warehouses.find((w) => w.id === r.warehouse_id)?.name ?? "—"}</span>
+                      <span className="font-medium tabular-nums">{r.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">Created {new Date(detail.created_at).toLocaleString()}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
