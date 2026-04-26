@@ -232,6 +232,49 @@ const Stock = () => {
           </Table>
         </CardContent>
       </Card>
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{detail ? itemMap.get(detail.item_id)?.name ?? "Stock" : "Stock"}</DialogTitle>
+            <DialogDescription className="font-mono text-xs">{detail ? itemMap.get(detail.item_id)?.sku : ""}</DialogDescription>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-3 gap-3 border-b border-border/60 py-1.5">
+                <div className="text-xs text-muted-foreground">Warehouse</div>
+                <div className="col-span-2">{whMap.get(detail.warehouse_id) ?? "—"}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 border-b border-border/60 py-1.5">
+                <div className="text-xs text-muted-foreground">Quantity</div>
+                <div className="col-span-2 font-medium">{detail.quantity}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 border-b border-border/60 py-1.5">
+                <div className="text-xs text-muted-foreground">Status</div>
+                <div className="col-span-2"><Badge variant="outline" className={statusClass(detail.status)}>{STATUS_LABEL[detail.status]}</Badge></div>
+              </div>
+              <div>
+                <div className="mb-1 text-xs text-muted-foreground">Recent movements</div>
+                <div className="space-y-1 max-h-60 overflow-auto">
+                  {moves.length === 0 && <div className="text-xs text-muted-foreground">No movements for this item & warehouse.</div>}
+                  {moves.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between rounded border border-border px-2 py-1 text-xs">
+                      <div>
+                        <Badge variant="outline" className="mr-2">{m.movement_type}</Badge>
+                        <span>{m.reason ?? "—"}</span>
+                        {m.reference && <span className="ml-1 text-muted-foreground">({m.reference})</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium tabular-nums">{m.quantity}</span>
+                        <span className="text-muted-foreground">{new Date(m.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
