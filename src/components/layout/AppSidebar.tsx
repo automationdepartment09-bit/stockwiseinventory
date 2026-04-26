@@ -1,4 +1,4 @@
-import { Boxes, LayoutDashboard, Package, Tag, Warehouse, ArrowLeftRight, BarChart3, Users, ShieldCheck, ScrollText, Bell, Settings, ClipboardCheck, Layers, MessageSquare, PackageMinus, FolderKanban } from "lucide-react";
+import { Boxes, LayoutDashboard, Package, Tag, Warehouse, ArrowLeftRight, BarChart3, Users, ShieldCheck, ScrollText, Bell, Settings, ClipboardCheck, Layers, MessageSquare, PackageMinus, FolderKanban, History } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
