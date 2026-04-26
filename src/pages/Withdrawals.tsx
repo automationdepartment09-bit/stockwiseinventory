@@ -80,6 +80,7 @@ const Withdrawals = () => {
   const [fByName, setFByName] = useState("");
   const [fPurpose, setFPurpose] = useState("");
   const [fRef, setFRef] = useState("");
+  const [fProject, setFProject] = useState<string>("__none__");
   const [fDate, setFDate] = useState(new Date().toISOString().slice(0, 10));
   const [fReturn, setFReturn] = useState(false);
   const [fReturnDate, setFReturnDate] = useState("");
