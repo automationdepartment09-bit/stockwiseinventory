@@ -29,6 +29,7 @@ interface Withdrawal {
   withdrawn_by_name: string | null;
   purpose: string;
   project_reference: string | null;
+  project_id: string | null;
   withdrawal_date: string;
   return_expected: boolean;
   expected_return_date: string | null;
@@ -60,6 +61,7 @@ const Withdrawals = () => {
   const [items, setItems] = useState<{ id: string; name: string; sku: string }[]>([]);
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [users, setUsers] = useState<{ id: string; full_name: string | null; email: string | null }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; code: string | null }[]>([]);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
@@ -78,6 +80,7 @@ const Withdrawals = () => {
   const [fByName, setFByName] = useState("");
   const [fPurpose, setFPurpose] = useState("");
   const [fRef, setFRef] = useState("");
+  const [fProject, setFProject] = useState<string>("__none__");
   const [fDate, setFDate] = useState(new Date().toISOString().slice(0, 10));
   const [fReturn, setFReturn] = useState(false);
   const [fReturnDate, setFReturnDate] = useState("");
@@ -85,18 +88,20 @@ const Withdrawals = () => {
   const [fFile, setFFile] = useState<File | null>(null);
 
   const loadAll = async () => {
-    const [w, it, wh, pf] = await Promise.all([
+    const [w, it, wh, pf, pj] = await Promise.all([
       supabase.from("withdrawals").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("items").select("id,name,sku").eq("is_active", true).order("name"),
       supabase.from("warehouses").select("id,name").eq("is_active", true).order("name"),
       isAdmin
         ? supabase.from("profiles").select("id,full_name,email").order("full_name")
         : Promise.resolve({ data: [{ id: user!.id, full_name: user!.user_metadata?.full_name ?? null, email: user!.email ?? null }] } as any),
+      supabase.from("projects").select("id,name,code").eq("is_active", true).order("name"),
     ]);
     setRows((w.data ?? []) as Withdrawal[]);
     setItems(it.data ?? []);
     setWarehouses(wh.data ?? []);
     setUsers((pf.data ?? []) as any);
+    setProjects((pj.data ?? []) as any);
   };
 
   useEffect(() => { loadAll(); }, []);
@@ -104,6 +109,7 @@ const Withdrawals = () => {
   const itemMap = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
   const whMap = useMemo(() => Object.fromEntries(warehouses.map((w) => [w.id, w])), [warehouses]);
   const userMap = useMemo(() => Object.fromEntries(users.map((u) => [u.id, u])), [users]);
+  const projectMap = useMemo(() => Object.fromEntries(projects.map((p) => [p.id, p])), [projects]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -122,7 +128,7 @@ const Withdrawals = () => {
   const resetForm = () => {
     setFItem(""); setFWarehouse(""); setFQty(1);
     setFByUser("__none__"); setFByName("");
-    setFPurpose(""); setFRef(""); setFDate(new Date().toISOString().slice(0, 10));
+    setFPurpose(""); setFRef(""); setFProject("__none__"); setFDate(new Date().toISOString().slice(0, 10));
     setFReturn(false); setFReturnDate(""); setFNotes(""); setFFile(null);
   };
 
@@ -153,6 +159,7 @@ const Withdrawals = () => {
       withdrawn_by_name: fByName.trim() || null,
       purpose: fPurpose.trim(),
       project_reference: fRef.trim() || null,
+      project_id: fProject === "__none__" ? null : fProject,
       withdrawal_date: fDate,
       return_expected: fReturn,
       expected_return_date: fReturn ? fReturnDate : null,
@@ -277,8 +284,20 @@ const Withdrawals = () => {
                       <Input value={fPurpose} onChange={(e) => setFPurpose(e.target.value)} placeholder="What is this for?" required maxLength={300} />
                     </div>
                     <div className="space-y-1.5">
+                      <Label>Project</Label>
+                      <Select value={fProject} onValueChange={setFProject}>
+                        <SelectTrigger><SelectValue placeholder="No project" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— No project —</SelectItem>
+                          {projects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ""}{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label>Project / job reference</Label>
-                      <Input value={fRef} onChange={(e) => setFRef(e.target.value)} placeholder="PO #, ticket, project code" maxLength={120} />
+                      <Input value={fRef} onChange={(e) => setFRef(e.target.value)} placeholder="PO #, ticket, custom ref" maxLength={120} />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="flex items-center gap-2">
@@ -397,6 +416,7 @@ const Withdrawals = () => {
               <Row label="Quantity">{view.quantity}</Row>
               <Row label="Withdrawn by">{byLabel(view)}</Row>
               <Row label="Purpose">{view.purpose}</Row>
+              {view.project_id && projectMap[view.project_id] && <Row label="Project">{projectMap[view.project_id].code ? `${projectMap[view.project_id].code} · ` : ""}{projectMap[view.project_id].name}</Row>}
               {view.project_reference && <Row label="Reference">{view.project_reference}</Row>}
               {view.return_expected && <Row label="Return by">{view.expected_return_date ?? "—"}</Row>}
               {view.notes && <Row label="Notes"><span className="whitespace-pre-wrap">{view.notes}</span></Row>}

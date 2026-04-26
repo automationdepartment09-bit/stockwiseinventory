@@ -190,6 +190,39 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          code: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stock_levels: {
         Row: {
           id: string
@@ -510,6 +543,7 @@ export type Database = {
           item_id: string
           movement_id: string | null
           notes: string | null
+          project_id: string | null
           project_reference: string | null
           purpose: string
           quantity: number
@@ -534,6 +568,7 @@ export type Database = {
           item_id: string
           movement_id?: string | null
           notes?: string | null
+          project_id?: string | null
           project_reference?: string | null
           purpose: string
           quantity: number
@@ -558,6 +593,7 @@ export type Database = {
           item_id?: string
           movement_id?: string | null
           notes?: string | null
+          project_id?: string | null
           project_reference?: string | null
           purpose?: string
           quantity?: number
@@ -573,7 +609,15 @@ export type Database = {
           withdrawn_by_name?: string | null
           withdrawn_by_user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "withdrawals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

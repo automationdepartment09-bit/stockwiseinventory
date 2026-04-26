@@ -19,6 +19,7 @@ import Notifications from "./pages/Notifications";
 import Requests from "./pages/Requests";
 import Chat from "./pages/Chat";
 import Withdrawals from "./pages/Withdrawals";
+import Projects from "./pages/Projects";
 import Profile from "./pages/Profile";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAudit from "./pages/admin/AdminAudit";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/requests" element={<Requests />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/withdrawals" element={<Withdrawals />} />
+              <Route path="/projects" element={<Projects />} />
               <Route path="/profile" element={<Profile />} />
               <Route element={<ProtectedRoute requireRoles={["admin"]}><AppShell /></ProtectedRoute>}>
                 <Route path="/admin/users" element={<AdminUsers />} />
