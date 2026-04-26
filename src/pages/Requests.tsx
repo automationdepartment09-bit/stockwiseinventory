@@ -299,4 +299,11 @@ const Requests = () => {
   );
 };
 
+const RRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="grid grid-cols-3 gap-3 border-b border-border/60 py-1.5 last:border-0">
+    <div className="text-xs text-muted-foreground">{label}</div>
+    <div className="col-span-2">{children}</div>
+  </div>
+);
+
 export default Requests;
