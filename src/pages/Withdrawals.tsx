@@ -88,18 +88,20 @@ const Withdrawals = () => {
   const [fFile, setFFile] = useState<File | null>(null);
 
   const loadAll = async () => {
-    const [w, it, wh, pf] = await Promise.all([
+    const [w, it, wh, pf, pj] = await Promise.all([
       supabase.from("withdrawals").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("items").select("id,name,sku").eq("is_active", true).order("name"),
       supabase.from("warehouses").select("id,name").eq("is_active", true).order("name"),
       isAdmin
         ? supabase.from("profiles").select("id,full_name,email").order("full_name")
         : Promise.resolve({ data: [{ id: user!.id, full_name: user!.user_metadata?.full_name ?? null, email: user!.email ?? null }] } as any),
+      supabase.from("projects").select("id,name,code").eq("is_active", true).order("name"),
     ]);
     setRows((w.data ?? []) as Withdrawal[]);
     setItems(it.data ?? []);
     setWarehouses(wh.data ?? []);
     setUsers((pf.data ?? []) as any);
+    setProjects((pj.data ?? []) as any);
   };
 
   useEffect(() => { loadAll(); }, []);
