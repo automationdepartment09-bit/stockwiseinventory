@@ -159,6 +159,7 @@ const Withdrawals = () => {
       withdrawn_by_name: fByName.trim() || null,
       purpose: fPurpose.trim(),
       project_reference: fRef.trim() || null,
+      project_id: fProject === "__none__" ? null : fProject,
       withdrawal_date: fDate,
       return_expected: fReturn,
       expected_return_date: fReturn ? fReturnDate : null,
