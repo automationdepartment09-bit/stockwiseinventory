@@ -70,6 +70,7 @@ const Requests = () => {
   const [reqQty, setReqQty] = useState("1");
   const [reqReason, setReqReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [detail, setDetail] = useState<Req | null>(null);
 
   const load = async () => {
     const [{ data: rs }, { data: its }, { data: ws }] = await Promise.all([
