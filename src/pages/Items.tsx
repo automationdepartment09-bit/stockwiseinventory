@@ -66,6 +66,7 @@ const Items = () => {
   const [deleting, setDeleting] = useState(false);
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [editing, setEditing] = useState(false);
+  const [detail, setDetail] = useState<Item | null>(null);
 
   const confirmDelete = async () => {
     if (!toDelete) return;
@@ -362,7 +363,7 @@ const Items = () => {
                 const low = it.reorder_level > 0 && overall <= it.reorder_level;
                 const cat = categories.find((c) => c.id === it.category_id);
                 return (
-                  <TableRow key={it.id}>
+                  <TableRow key={it.id} onClick={() => setDetail(it)} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="font-mono text-xs">{it.sku}</TableCell>
                     <TableCell className="font-medium">{it.name}</TableCell>
                     <TableCell>{cat ? <Badge variant="outline">{cat.name}</Badge> : "—"}</TableCell>
@@ -377,7 +378,7 @@ const Items = () => {
                       {low ? <Badge variant="destructive">Low</Badge> : <Badge variant="outline" className="border-primary/50 text-primary">OK</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                         {canWithdraw && (
                           <Button
                             size="sm"
@@ -592,6 +593,38 @@ const Items = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{detail?.name}</DialogTitle>
+            <DialogDescription className="font-mono text-xs">{detail?.sku}</DialogDescription>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-3 text-sm">
+              <DRow label="Category">{categories.find((c) => c.id === detail.category_id)?.name ?? "—"}</DRow>
+              <DRow label="Status">{detail.is_active ? <Badge variant="outline" className="border-primary/50 text-primary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}</DRow>
+              <DRow label="Unit price">₱{Number(detail.unit_price).toFixed(2)}</DRow>
+              <DRow label="Cost price">₱{Number(detail.cost_price).toFixed(2)}</DRow>
+              <DRow label="Reorder level">{detail.reorder_level}</DRow>
+              <DRow label="Total stock">{stockMap.get(detail.id) ?? 0}</DRow>
+              {detail.description && <DRow label="Description"><span className="whitespace-pre-wrap">{detail.description}</span></DRow>}
+              <div>
+                <div className="mb-1 text-xs text-muted-foreground">Stock per warehouse</div>
+                <div className="space-y-1">
+                  {(stockByWh.get(detail.id) ?? []).length === 0 && <div className="text-xs text-muted-foreground">No stock anywhere.</div>}
+                  {(stockByWh.get(detail.id) ?? []).map((r) => (
+                    <div key={r.warehouse_id} className="flex items-center justify-between rounded border border-border px-2 py-1">
+                      <span>{warehouses.find((w) => w.id === r.warehouse_id)?.name ?? "—"}</span>
+                      <span className="font-medium tabular-nums">{r.quantity}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">Created {new Date(detail.created_at).toLocaleString()}</div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -602,6 +635,13 @@ const SortBtn = ({ label, field, current, dir, onClick }: { label: string; field
     <ArrowUpDown className={`h-3 w-3 ${current === field ? "text-primary" : ""}`} />
     {current === field && <span className="text-[10px]">{dir === "asc" ? "↑" : "↓"}</span>}
   </button>
+);
+
+const DRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="grid grid-cols-3 gap-3 border-b border-border/60 py-1.5 last:border-0">
+    <div className="text-xs text-muted-foreground">{label}</div>
+    <div className="col-span-2">{children}</div>
+  </div>
 );
 
 export default Items;

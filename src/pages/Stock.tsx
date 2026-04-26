@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Search, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -56,6 +56,10 @@ const Stock = () => {
   const [aRef, setARef] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Detail dialog
+  const [detail, setDetail] = useState<Row | null>(null);
+  const [moves, setMoves] = useState<any[]>([]);
+
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const whMap = useMemo(() => new Map(whs.map((w) => [w.id, w.name])), [whs]);
 
@@ -86,6 +90,19 @@ const Stock = () => {
     if (error) return toast.error(error.message);
     toast.success("Status updated");
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  };
+
+  const openDetail = async (r: Row) => {
+    setDetail(r);
+    setMoves([]);
+    const { data } = await supabase
+      .from("stock_movements")
+      .select("id,movement_type,quantity,reason,reference,created_at,from_warehouse_id,to_warehouse_id")
+      .eq("item_id", r.item_id)
+      .or(`from_warehouse_id.eq.${r.warehouse_id},to_warehouse_id.eq.${r.warehouse_id}`)
+      .order("created_at", { ascending: false })
+      .limit(25);
+    setMoves(data ?? []);
   };
 
   const submitAdd = async (e: React.FormEvent) => {
@@ -186,12 +203,12 @@ const Stock = () => {
               {filtered.map((r) => {
                 const it = itemMap.get(r.item_id);
                 return (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} onClick={() => openDetail(r)} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="font-mono text-xs">{it?.sku ?? "—"}</TableCell>
                     <TableCell className="font-medium">{it?.name ?? "Unknown"}</TableCell>
                     <TableCell>{whMap.get(r.warehouse_id) ?? "—"}</TableCell>
                     <TableCell className="text-right">{r.quantity}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {canEdit ? (
                         <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v as Status)}>
                           <SelectTrigger className="h-8 w-[150px]"><SelectValue /></SelectTrigger>
@@ -215,6 +232,49 @@ const Stock = () => {
           </Table>
         </CardContent>
       </Card>
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{detail ? itemMap.get(detail.item_id)?.name ?? "Stock" : "Stock"}</DialogTitle>
+            <DialogDescription className="font-mono text-xs">{detail ? itemMap.get(detail.item_id)?.sku : ""}</DialogDescription>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-3 gap-3 border-b border-border/60 py-1.5">
+                <div className="text-xs text-muted-foreground">Warehouse</div>
+                <div className="col-span-2">{whMap.get(detail.warehouse_id) ?? "—"}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 border-b border-border/60 py-1.5">
+                <div className="text-xs text-muted-foreground">Quantity</div>
+                <div className="col-span-2 font-medium">{detail.quantity}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 border-b border-border/60 py-1.5">
+                <div className="text-xs text-muted-foreground">Status</div>
+                <div className="col-span-2"><Badge variant="outline" className={statusClass(detail.status)}>{STATUS_LABEL[detail.status]}</Badge></div>
+              </div>
+              <div>
+                <div className="mb-1 text-xs text-muted-foreground">Recent movements</div>
+                <div className="space-y-1 max-h-60 overflow-auto">
+                  {moves.length === 0 && <div className="text-xs text-muted-foreground">No movements for this item & warehouse.</div>}
+                  {moves.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between rounded border border-border px-2 py-1 text-xs">
+                      <div>
+                        <Badge variant="outline" className="mr-2">{m.movement_type}</Badge>
+                        <span>{m.reason ?? "—"}</span>
+                        {m.reference && <span className="ml-1 text-muted-foreground">({m.reference})</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium tabular-nums">{m.quantity}</span>
+                        <span className="text-muted-foreground">{new Date(m.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

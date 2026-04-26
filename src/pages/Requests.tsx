@@ -70,6 +70,7 @@ const Requests = () => {
   const [reqQty, setReqQty] = useState("1");
   const [reqReason, setReqReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [detail, setDetail] = useState<Req | null>(null);
 
   const load = async () => {
     const [{ data: rs }, { data: its }, { data: ws }] = await Promise.all([
@@ -170,7 +171,7 @@ const Requests = () => {
               {filtered.map((r) => {
                 const it = items[r.item_id];
                 return (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} onClick={() => setDetail(r)} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="font-medium">
                       {it?.name ?? "—"}
                       {it && <div className="font-mono text-[10px] text-muted-foreground">{it.sku}</div>}
@@ -186,7 +187,7 @@ const Requests = () => {
                           : <Badge className={statusBadgeClass[r.status]}>{STATUS_LABEL[r.status]}</Badge>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       {canReview && r.status === "pending" && (
                         noteFor === r.id ? (
                           <div className="flex items-center justify-end gap-2">
@@ -269,8 +270,40 @@ const Requests = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Request details</DialogTitle>
+          </DialogHeader>
+          {detail && (
+            <div className="space-y-2 text-sm">
+              <RRow label="Item">{items[detail.item_id]?.name ?? "—"} <span className="font-mono text-xs text-muted-foreground">({items[detail.item_id]?.sku})</span></RRow>
+              <RRow label="Warehouse">{whs[detail.warehouse_id] ?? "—"}</RRow>
+              <RRow label="Quantity">{detail.quantity}</RRow>
+              <RRow label="Status">
+                {detail.status === "rejected"
+                  ? <Badge variant="destructive">Rejected</Badge>
+                  : detail.status === "pending"
+                    ? <Badge variant="outline">Pending</Badge>
+                    : <Badge className={statusBadgeClass[detail.status]}>{STATUS_LABEL[detail.status]}</Badge>}
+              </RRow>
+              {detail.reason && <RRow label="Reason"><span className="whitespace-pre-wrap">{detail.reason}</span></RRow>}
+              {detail.review_note && <RRow label="Review note">{detail.review_note}</RRow>}
+              <RRow label="Submitted">{new Date(detail.created_at).toLocaleString()}</RRow>
+              {detail.reviewed_at && <RRow label="Reviewed">{new Date(detail.reviewed_at).toLocaleString()}</RRow>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+const RRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="grid grid-cols-3 gap-3 border-b border-border/60 py-1.5 last:border-0">
+    <div className="text-xs text-muted-foreground">{label}</div>
+    <div className="col-span-2">{children}</div>
+  </div>
+);
 
 export default Requests;
