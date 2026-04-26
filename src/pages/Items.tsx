@@ -66,6 +66,7 @@ const Items = () => {
   const [deleting, setDeleting] = useState(false);
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [editing, setEditing] = useState(false);
+  const [detail, setDetail] = useState<Item | null>(null);
 
   const confirmDelete = async () => {
     if (!toDelete) return;
