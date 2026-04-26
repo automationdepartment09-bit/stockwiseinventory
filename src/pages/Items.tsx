@@ -363,7 +363,7 @@ const Items = () => {
                 const low = it.reorder_level > 0 && overall <= it.reorder_level;
                 const cat = categories.find((c) => c.id === it.category_id);
                 return (
-                  <TableRow key={it.id}>
+                  <TableRow key={it.id} onClick={() => setDetail(it)} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="font-mono text-xs">{it.sku}</TableCell>
                     <TableCell className="font-medium">{it.name}</TableCell>
                     <TableCell>{cat ? <Badge variant="outline">{cat.name}</Badge> : "—"}</TableCell>
