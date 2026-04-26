@@ -416,6 +416,7 @@ const Withdrawals = () => {
               <Row label="Quantity">{view.quantity}</Row>
               <Row label="Withdrawn by">{byLabel(view)}</Row>
               <Row label="Purpose">{view.purpose}</Row>
+              {view.project_id && projectMap[view.project_id] && <Row label="Project">{projectMap[view.project_id].code ? `${projectMap[view.project_id].code} · ` : ""}{projectMap[view.project_id].name}</Row>}
               {view.project_reference && <Row label="Reference">{view.project_reference}</Row>}
               {view.return_expected && <Row label="Return by">{view.expected_return_date ?? "—"}</Row>}
               {view.notes && <Row label="Notes"><span className="whitespace-pre-wrap">{view.notes}</span></Row>}
