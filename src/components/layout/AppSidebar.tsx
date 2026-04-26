@@ -28,6 +28,7 @@ const mainItems = [
   { title: "Chat", url: "/chat", icon: MessageSquare },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Notifications", url: "/notifications", icon: Bell },
+  { title: "My history", url: "/history", icon: History },
 ];
 
 const adminItems = [
