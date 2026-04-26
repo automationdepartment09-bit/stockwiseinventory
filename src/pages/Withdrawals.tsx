@@ -29,6 +29,7 @@ interface Withdrawal {
   withdrawn_by_name: string | null;
   purpose: string;
   project_reference: string | null;
+  project_id: string | null;
   withdrawal_date: string;
   return_expected: boolean;
   expected_return_date: string | null;
