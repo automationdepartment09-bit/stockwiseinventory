@@ -20,6 +20,7 @@ import Requests from "./pages/Requests";
 import Chat from "./pages/Chat";
 import Withdrawals from "./pages/Withdrawals";
 import Projects from "./pages/Projects";
+import History from "./pages/History";
 import Profile from "./pages/Profile";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminAudit from "./pages/admin/AdminAudit";
