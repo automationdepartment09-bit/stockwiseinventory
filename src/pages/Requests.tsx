@@ -187,7 +187,7 @@ const Requests = () => {
                           : <Badge className={statusBadgeClass[r.status]}>{STATUS_LABEL[r.status]}</Badge>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       {canReview && r.status === "pending" && (
                         noteFor === r.id ? (
                           <div className="flex items-center justify-end gap-2">
