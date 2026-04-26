@@ -171,7 +171,7 @@ const Requests = () => {
               {filtered.map((r) => {
                 const it = items[r.item_id];
                 return (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} onClick={() => setDetail(r)} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="font-medium">
                       {it?.name ?? "—"}
                       {it && <div className="font-mono text-[10px] text-muted-foreground">{it.sku}</div>}
