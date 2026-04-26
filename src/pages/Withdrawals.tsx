@@ -61,6 +61,7 @@ const Withdrawals = () => {
   const [items, setItems] = useState<{ id: string; name: string; sku: string }[]>([]);
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [users, setUsers] = useState<{ id: string; full_name: string | null; email: string | null }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; code: string | null }[]>([]);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
