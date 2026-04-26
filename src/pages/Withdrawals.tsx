@@ -109,6 +109,7 @@ const Withdrawals = () => {
   const itemMap = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
   const whMap = useMemo(() => Object.fromEntries(warehouses.map((w) => [w.id, w])), [warehouses]);
   const userMap = useMemo(() => Object.fromEntries(users.map((u) => [u.id, u])), [users]);
+  const projectMap = useMemo(() => Object.fromEntries(projects.map((p) => [p.id, p])), [projects]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
