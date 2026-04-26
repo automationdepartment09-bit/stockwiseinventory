@@ -92,6 +92,19 @@ const Stock = () => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
   };
 
+  const openDetail = async (r: Row) => {
+    setDetail(r);
+    setMoves([]);
+    const { data } = await supabase
+      .from("stock_movements")
+      .select("id,movement_type,quantity,reason,reference,created_at,from_warehouse_id,to_warehouse_id")
+      .eq("item_id", r.item_id)
+      .or(`from_warehouse_id.eq.${r.warehouse_id},to_warehouse_id.eq.${r.warehouse_id}`)
+      .order("created_at", { ascending: false })
+      .limit(25);
+    setMoves(data ?? []);
+  };
+
   const submitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!aItem || !aWh || aQty <= 0) return toast.error("Item, warehouse and quantity required");
