@@ -128,7 +128,7 @@ const Withdrawals = () => {
   const resetForm = () => {
     setFItem(""); setFWarehouse(""); setFQty(1);
     setFByUser("__none__"); setFByName("");
-    setFPurpose(""); setFRef(""); setFDate(new Date().toISOString().slice(0, 10));
+    setFPurpose(""); setFRef(""); setFProject("__none__"); setFDate(new Date().toISOString().slice(0, 10));
     setFReturn(false); setFReturnDate(""); setFNotes(""); setFFile(null);
   };
 
