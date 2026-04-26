@@ -56,6 +56,10 @@ const Stock = () => {
   const [aRef, setARef] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Detail dialog
+  const [detail, setDetail] = useState<Row | null>(null);
+  const [moves, setMoves] = useState<any[]>([]);
+
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const whMap = useMemo(() => new Map(whs.map((w) => [w.id, w.name])), [whs]);
 
