@@ -188,15 +188,18 @@ const Requests = () => {
                 <TableHead>Item</TableHead>
                 <TableHead>Warehouse</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
+                <TableHead>Requested by</TableHead>
+                <TableHead>Project</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
+                <TableHead>Submitted (date & time)</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((r) => {
                 const it = items[r.item_id];
+                const d = new Date(r.created_at);
                 return (
                   <TableRow key={r.id} onClick={() => setDetail(r)} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="font-medium">
@@ -205,7 +208,9 @@ const Requests = () => {
                     </TableCell>
                     <TableCell>{whs[r.warehouse_id] ?? "—"}</TableCell>
                     <TableCell className="text-right">{r.quantity}</TableCell>
-                    <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">{r.reason ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{requesterLabel(r.requested_by)}</TableCell>
+                    <TableCell className="text-xs">{projectLabel(r.project_id)}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">{r.reason ?? "—"}</TableCell>
                     <TableCell>
                       {r.status === "rejected"
                         ? <Badge variant="destructive">Rejected</Badge>
@@ -213,7 +218,10 @@ const Requests = () => {
                           ? <Badge variant="outline">Pending</Badge>
                           : <Badge className={statusBadgeClass[r.status]}>{STATUS_LABEL[r.status]}</Badge>}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</TableCell>
+                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                      <div>{d.toLocaleDateString()}</div>
+                      <div className="tabular-nums">{d.toLocaleTimeString()}</div>
+                    </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       {canReview && r.status === "pending" && (
                         noteFor === r.id ? (
@@ -246,7 +254,7 @@ const Requests = () => {
                 );
               })}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No requests.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="py-10 text-center text-muted-foreground">No requests.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
