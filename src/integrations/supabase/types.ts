@@ -75,49 +75,67 @@ export type Database = {
         Row: {
           barcode: string | null
           category_id: string | null
+          coding: string | null
           cost_price: number
           created_at: string
           created_by: string | null
           description: string | null
           id: string
           image_url: string | null
+          initial_quantity: number | null
           is_active: boolean
           name: string
+          ref_number: string | null
+          remarks: string | null
           reorder_level: number
           sku: string
+          source: string | null
           unit_price: number
+          uom: string | null
           updated_at: string
         }
         Insert: {
           barcode?: string | null
           category_id?: string | null
+          coding?: string | null
           cost_price?: number
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          initial_quantity?: number | null
           is_active?: boolean
           name: string
+          ref_number?: string | null
+          remarks?: string | null
           reorder_level?: number
           sku: string
+          source?: string | null
           unit_price?: number
+          uom?: string | null
           updated_at?: string
         }
         Update: {
           barcode?: string | null
           category_id?: string | null
+          coding?: string | null
           cost_price?: number
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          initial_quantity?: number | null
           is_active?: boolean
           name?: string
+          ref_number?: string | null
+          remarks?: string | null
           reorder_level?: number
           sku?: string
+          source?: string | null
           unit_price?: number
+          uom?: string | null
           updated_at?: string
         }
         Relationships: [

@@ -28,6 +28,8 @@ interface Item {
   id: string; sku: string; name: string; description: string | null;
   category_id: string | null; unit_price: number; cost_price: number; reorder_level: number;
   is_active: boolean; created_at: string;
+  ref_number: string | null; source: string | null; initial_quantity: number | null;
+  uom: string | null; coding: string | null; remarks: string | null;
 }
 interface Category { id: string; name: string; sku_prefix: string }
 interface Warehouse { id: string; name: string }
@@ -91,6 +93,12 @@ const Items = () => {
       cost_price: Number(fd.get("cost_price") ?? 0),
       reorder_level: Number(fd.get("reorder_level") ?? 0),
       is_active: String(fd.get("is_active") ?? "true") === "true",
+      ref_number: String(fd.get("ref_number") ?? "").trim() || null,
+      source: String(fd.get("source") ?? "").trim() || null,
+      initial_quantity: fd.get("initial_quantity") ? Number(fd.get("initial_quantity")) : null,
+      uom: String(fd.get("uom") ?? "").trim() || null,
+      coding: String(fd.get("coding") ?? "").trim() || null,
+      remarks: String(fd.get("remarks") ?? "").trim() || null,
     };
     if (!payload.name) return toast.error("Name required");
     setEditing(true);
@@ -177,6 +185,12 @@ const Items = () => {
       cost_price: Number(fd.get("cost_price") ?? 0),
       reorder_level: Number(fd.get("reorder_level") ?? 0),
       barcode: String(fd.get("barcode") ?? "").trim() || null,
+      ref_number: String(fd.get("ref_number") ?? "").trim() || null,
+      source: String(fd.get("source") ?? "").trim() || null,
+      initial_quantity: fd.get("initial_quantity") ? Number(fd.get("initial_quantity")) : null,
+      uom: String(fd.get("uom") ?? "").trim() || null,
+      coding: String(fd.get("coding") ?? "").trim() || null,
+      remarks: String(fd.get("remarks") ?? "").trim() || null,
       created_by: (await supabase.auth.getUser()).data.user?.id,
     };
     if (!payload.name) return toast.error("Name required");
@@ -297,13 +311,39 @@ const Items = () => {
                         <Input name="reorder_level" type="number" defaultValue="0" />
                       </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Barcode (optional)</Label>
-                      <Input name="barcode" maxLength={100} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <Label>Ref number</Label>
+                        <Input name="ref_number" maxLength={100} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Source</Label>
+                        <Input name="source" maxLength={200} placeholder="Supplier, donation…" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Initial quantity</Label>
+                        <Input name="initial_quantity" type="number" min="0" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>UOM</Label>
+                        <Input name="uom" maxLength={20} placeholder="pcs, kg, box…" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Coding</Label>
+                        <Input name="coding" maxLength={100} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Barcode</Label>
+                        <Input name="barcode" maxLength={100} />
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label>Description</Label>
                       <Textarea name="description" maxLength={1000} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Remarks</Label>
+                      <Textarea name="remarks" maxLength={1000} />
                     </div>
                     <DialogFooter>
                       <Button type="submit" disabled={saving}>{saving ? "Creating…" : "Create"}</Button>
@@ -564,9 +604,35 @@ const Items = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label>Ref number</Label>
+                  <Input name="ref_number" maxLength={100} defaultValue={editItem.ref_number ?? ""} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Source</Label>
+                  <Input name="source" maxLength={200} defaultValue={editItem.source ?? ""} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Initial quantity</Label>
+                  <Input name="initial_quantity" type="number" min="0" defaultValue={editItem.initial_quantity ?? ""} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>UOM</Label>
+                  <Input name="uom" maxLength={20} defaultValue={editItem.uom ?? ""} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Coding</Label>
+                  <Input name="coding" maxLength={100} defaultValue={editItem.coding ?? ""} />
+                </div>
+              </div>
               <div className="space-y-1.5">
                 <Label>Description</Label>
                 <Textarea name="description" maxLength={1000} defaultValue={editItem.description ?? ""} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Remarks</Label>
+                <Textarea name="remarks" maxLength={1000} defaultValue={editItem.remarks ?? ""} />
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
@@ -603,11 +669,17 @@ const Items = () => {
             <div className="space-y-3 text-sm">
               <DRow label="Category">{categories.find((c) => c.id === detail.category_id)?.name ?? "—"}</DRow>
               <DRow label="Status">{detail.is_active ? <Badge variant="outline" className="border-primary/50 text-primary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}</DRow>
+              {detail.ref_number && <DRow label="Ref number">{detail.ref_number}</DRow>}
+              {detail.coding && <DRow label="Coding">{detail.coding}</DRow>}
+              {detail.source && <DRow label="Source">{detail.source}</DRow>}
+              {detail.uom && <DRow label="UOM">{detail.uom}</DRow>}
+              {detail.initial_quantity != null && <DRow label="Initial quantity">{detail.initial_quantity}</DRow>}
               <DRow label="Unit price">₱{Number(detail.unit_price).toFixed(2)}</DRow>
               <DRow label="Cost price">₱{Number(detail.cost_price).toFixed(2)}</DRow>
               <DRow label="Reorder level">{detail.reorder_level}</DRow>
               <DRow label="Total stock">{stockMap.get(detail.id) ?? 0}</DRow>
               {detail.description && <DRow label="Description"><span className="whitespace-pre-wrap">{detail.description}</span></DRow>}
+              {detail.remarks && <DRow label="Remarks"><span className="whitespace-pre-wrap">{detail.remarks}</span></DRow>}
               <div>
                 <div className="mb-1 text-xs text-muted-foreground">Stock per warehouse</div>
                 <div className="space-y-1">
