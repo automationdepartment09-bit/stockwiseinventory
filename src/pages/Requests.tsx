@@ -298,6 +298,22 @@ const Requests = () => {
               <Label>Reason / source (optional)</Label>
               <Input value={reqReason} onChange={(e) => setReqReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Project (optional)</Label>
+              <Select value={reqProject} onValueChange={setReqProject}>
+                <SelectTrigger><SelectValue placeholder="No project" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— No project —</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ""}{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="rounded-md border border-border/60 bg-muted/30 p-2 text-xs text-muted-foreground">
+              <div><span className="font-medium text-foreground">Requested by:</span> {requesterLabel(user?.id ?? "")}</div>
+              <div><span className="font-medium text-foreground">Date & time:</span> {new Date().toLocaleString()} <span className="opacity-60">(captured on submit)</span></div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenNew(false)}>Cancel</Button>
@@ -315,6 +331,8 @@ const Requests = () => {
               <RRow label="Item">{items[detail.item_id]?.name ?? "—"} <span className="font-mono text-xs text-muted-foreground">({items[detail.item_id]?.sku})</span></RRow>
               <RRow label="Warehouse">{whs[detail.warehouse_id] ?? "—"}</RRow>
               <RRow label="Quantity">{detail.quantity}</RRow>
+              <RRow label="Requested by">{requesterLabel(detail.requested_by)}</RRow>
+              <RRow label="Project">{projectLabel(detail.project_id)}</RRow>
               <RRow label="Status">
                 {detail.status === "rejected"
                   ? <Badge variant="destructive">Rejected</Badge>
@@ -324,8 +342,9 @@ const Requests = () => {
               </RRow>
               {detail.reason && <RRow label="Reason"><span className="whitespace-pre-wrap">{detail.reason}</span></RRow>}
               {detail.review_note && <RRow label="Review note">{detail.review_note}</RRow>}
-              <RRow label="Submitted">{new Date(detail.created_at).toLocaleString()}</RRow>
-              {detail.reviewed_at && <RRow label="Reviewed">{new Date(detail.reviewed_at).toLocaleString()}</RRow>}
+              <RRow label="Submitted (date & time)">{new Date(detail.created_at).toLocaleString()}</RRow>
+              {detail.reviewed_by && <RRow label="Reviewed by">{requesterLabel(detail.reviewed_by)}</RRow>}
+              {detail.reviewed_at && <RRow label="Reviewed at">{new Date(detail.reviewed_at).toLocaleString()}</RRow>}
             </div>
           )}
         </DialogContent>
