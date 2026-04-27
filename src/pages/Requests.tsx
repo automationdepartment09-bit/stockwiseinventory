@@ -21,6 +21,7 @@ interface Req {
   reason: string | null; status: ReqStatus;
   requested_by: string; reviewed_by: string | null; review_note: string | null;
   reviewed_at: string | null; created_at: string;
+  project_id: string | null;
 }
 
 const STATUS_LABEL: Record<ReqStatus, string> = {
@@ -59,6 +60,9 @@ const Requests = () => {
   const [whs, setWhs] = useState<Record<string, string>>({});
   const [itemList, setItemList] = useState<{ id: string; name: string; sku: string }[]>([]);
   const [whList, setWhList] = useState<{ id: string; name: string }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; code: string | null }[]>([]);
+  const [projectMap, setProjectMap] = useState<Record<string, { name: string; code: string | null }>>({});
+  const [profileMap, setProfileMap] = useState<Record<string, { full_name: string | null; email: string | null }>>({});
   const [tab, setTab] = useState<"pending" | "all" | "mine">("pending");
   const [noteFor, setNoteFor] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -69,14 +73,17 @@ const Requests = () => {
   const [reqWh, setReqWh] = useState("");
   const [reqQty, setReqQty] = useState("1");
   const [reqReason, setReqReason] = useState("");
+  const [reqProject, setReqProject] = useState<string>("__none__");
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<Req | null>(null);
 
   const load = async () => {
-    const [{ data: rs }, { data: its }, { data: ws }] = await Promise.all([
+    const [{ data: rs }, { data: its }, { data: ws }, { data: pj }, { data: pf }] = await Promise.all([
       supabase.from("stock_requests").select("*").order("created_at", { ascending: false }).limit(200),
       supabase.from("items").select("id, name, sku").order("name"),
       supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
+      supabase.from("projects").select("id,name,code").eq("is_active", true).order("name"),
+      supabase.from("profiles").select("id,full_name,email"),
     ]);
     setRows((rs ?? []) as Req[]);
     const im: Record<string, { name: string; sku: string }> = {};
@@ -87,6 +94,13 @@ const Requests = () => {
     (ws ?? []).forEach((w: any) => { wm[w.id] = w.name; });
     setWhs(wm);
     setWhList((ws ?? []) as any);
+    setProjects((pj ?? []) as any);
+    const pm: Record<string, { name: string; code: string | null }> = {};
+    (pj ?? []).forEach((p: any) => { pm[p.id] = { name: p.name, code: p.code }; });
+    setProjectMap(pm);
+    const um: Record<string, { full_name: string | null; email: string | null }> = {};
+    (pf ?? []).forEach((u: any) => { um[u.id] = { full_name: u.full_name, email: u.email }; });
+    setProfileMap(um);
   };
   useEffect(() => { load(); }, []);
 
@@ -113,6 +127,7 @@ const Requests = () => {
     setReqWh(whList[0]?.id ?? "");
     setReqQty("1");
     setReqReason("");
+    setReqProject("__none__");
     setOpenNew(true);
   };
 
@@ -129,12 +144,24 @@ const Requests = () => {
       quantity: qty,
       reason: reqReason.trim() || null,
       requested_by: user.id,
-    });
+      project_id: reqProject === "__none__" ? null : reqProject,
+    } as any);
     setSubmitting(false);
     if (error) return toast.error(error.message);
     toast.success("Request submitted — pending approval");
     setOpenNew(false);
     load();
+  };
+
+  const requesterLabel = (id: string) => {
+    const p = profileMap[id];
+    return p?.full_name || p?.email || (id === user?.id ? "You" : "—");
+  };
+  const projectLabel = (id: string | null) => {
+    if (!id) return "—";
+    const p = projectMap[id];
+    if (!p) return "—";
+    return `${p.code ? p.code + " · " : ""}${p.name}`;
   };
 
   return (
@@ -161,15 +188,18 @@ const Requests = () => {
                 <TableHead>Item</TableHead>
                 <TableHead>Warehouse</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
+                <TableHead>Requested by</TableHead>
+                <TableHead>Project</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
+                <TableHead>Submitted (date & time)</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((r) => {
                 const it = items[r.item_id];
+                const d = new Date(r.created_at);
                 return (
                   <TableRow key={r.id} onClick={() => setDetail(r)} className="cursor-pointer hover:bg-muted/40">
                     <TableCell className="font-medium">
@@ -178,7 +208,9 @@ const Requests = () => {
                     </TableCell>
                     <TableCell>{whs[r.warehouse_id] ?? "—"}</TableCell>
                     <TableCell className="text-right">{r.quantity}</TableCell>
-                    <TableCell className="max-w-[240px] truncate text-sm text-muted-foreground">{r.reason ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{requesterLabel(r.requested_by)}</TableCell>
+                    <TableCell className="text-xs">{projectLabel(r.project_id)}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">{r.reason ?? "—"}</TableCell>
                     <TableCell>
                       {r.status === "rejected"
                         ? <Badge variant="destructive">Rejected</Badge>
@@ -186,7 +218,10 @@ const Requests = () => {
                           ? <Badge variant="outline">Pending</Badge>
                           : <Badge className={statusBadgeClass[r.status]}>{STATUS_LABEL[r.status]}</Badge>}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</TableCell>
+                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                      <div>{d.toLocaleDateString()}</div>
+                      <div className="tabular-nums">{d.toLocaleTimeString()}</div>
+                    </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       {canReview && r.status === "pending" && (
                         noteFor === r.id ? (
@@ -219,7 +254,7 @@ const Requests = () => {
                 );
               })}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No requests.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="py-10 text-center text-muted-foreground">No requests.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -263,6 +298,22 @@ const Requests = () => {
               <Label>Reason / source (optional)</Label>
               <Input value={reqReason} onChange={(e) => setReqReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Project (optional)</Label>
+              <Select value={reqProject} onValueChange={setReqProject}>
+                <SelectTrigger><SelectValue placeholder="No project" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— No project —</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.code ? `${p.code} · ` : ""}{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="rounded-md border border-border/60 bg-muted/30 p-2 text-xs text-muted-foreground">
+              <div><span className="font-medium text-foreground">Requested by:</span> {requesterLabel(user?.id ?? "")}</div>
+              <div><span className="font-medium text-foreground">Date & time:</span> {new Date().toLocaleString()} <span className="opacity-60">(captured on submit)</span></div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenNew(false)}>Cancel</Button>
@@ -280,6 +331,8 @@ const Requests = () => {
               <RRow label="Item">{items[detail.item_id]?.name ?? "—"} <span className="font-mono text-xs text-muted-foreground">({items[detail.item_id]?.sku})</span></RRow>
               <RRow label="Warehouse">{whs[detail.warehouse_id] ?? "—"}</RRow>
               <RRow label="Quantity">{detail.quantity}</RRow>
+              <RRow label="Requested by">{requesterLabel(detail.requested_by)}</RRow>
+              <RRow label="Project">{projectLabel(detail.project_id)}</RRow>
               <RRow label="Status">
                 {detail.status === "rejected"
                   ? <Badge variant="destructive">Rejected</Badge>
@@ -289,8 +342,9 @@ const Requests = () => {
               </RRow>
               {detail.reason && <RRow label="Reason"><span className="whitespace-pre-wrap">{detail.reason}</span></RRow>}
               {detail.review_note && <RRow label="Review note">{detail.review_note}</RRow>}
-              <RRow label="Submitted">{new Date(detail.created_at).toLocaleString()}</RRow>
-              {detail.reviewed_at && <RRow label="Reviewed">{new Date(detail.reviewed_at).toLocaleString()}</RRow>}
+              <RRow label="Submitted (date & time)">{new Date(detail.created_at).toLocaleString()}</RRow>
+              {detail.reviewed_by && <RRow label="Reviewed by">{requesterLabel(detail.reviewed_by)}</RRow>}
+              {detail.reviewed_at && <RRow label="Reviewed at">{new Date(detail.reviewed_at).toLocaleString()}</RRow>}
             </div>
           )}
         </DialogContent>
