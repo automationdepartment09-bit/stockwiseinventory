@@ -311,13 +311,39 @@ const Items = () => {
                         <Input name="reorder_level" type="number" defaultValue="0" />
                       </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Barcode (optional)</Label>
-                      <Input name="barcode" maxLength={100} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <Label>Ref number</Label>
+                        <Input name="ref_number" maxLength={100} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Source</Label>
+                        <Input name="source" maxLength={200} placeholder="Supplier, donation…" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Initial quantity</Label>
+                        <Input name="initial_quantity" type="number" min="0" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>UOM</Label>
+                        <Input name="uom" maxLength={20} placeholder="pcs, kg, box…" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Coding</Label>
+                        <Input name="coding" maxLength={100} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Barcode</Label>
+                        <Input name="barcode" maxLength={100} />
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label>Description</Label>
                       <Textarea name="description" maxLength={1000} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Remarks</Label>
+                      <Textarea name="remarks" maxLength={1000} />
                     </div>
                     <DialogFooter>
                       <Button type="submit" disabled={saving}>{saving ? "Creating…" : "Create"}</Button>
