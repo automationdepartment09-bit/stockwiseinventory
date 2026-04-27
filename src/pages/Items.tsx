@@ -185,6 +185,12 @@ const Items = () => {
       cost_price: Number(fd.get("cost_price") ?? 0),
       reorder_level: Number(fd.get("reorder_level") ?? 0),
       barcode: String(fd.get("barcode") ?? "").trim() || null,
+      ref_number: String(fd.get("ref_number") ?? "").trim() || null,
+      source: String(fd.get("source") ?? "").trim() || null,
+      initial_quantity: fd.get("initial_quantity") ? Number(fd.get("initial_quantity")) : null,
+      uom: String(fd.get("uom") ?? "").trim() || null,
+      coding: String(fd.get("coding") ?? "").trim() || null,
+      remarks: String(fd.get("remarks") ?? "").trim() || null,
       created_by: (await supabase.auth.getUser()).data.user?.id,
     };
     if (!payload.name) return toast.error("Name required");
