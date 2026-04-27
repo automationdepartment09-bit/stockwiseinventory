@@ -51,6 +51,7 @@ const App = () => (
               <Route path="/requests" element={<Requests />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/withdrawals" element={<Withdrawals />} />
+              <Route path="/returns" element={<Returns />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/history" element={<History />} />
               <Route path="/profile" element={<Profile />} />
