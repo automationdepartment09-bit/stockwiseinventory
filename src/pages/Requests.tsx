@@ -21,6 +21,7 @@ interface Req {
   reason: string | null; status: ReqStatus;
   requested_by: string; reviewed_by: string | null; review_note: string | null;
   reviewed_at: string | null; created_at: string;
+  project_id: string | null;
 }
 
 const STATUS_LABEL: Record<ReqStatus, string> = {
@@ -59,6 +60,9 @@ const Requests = () => {
   const [whs, setWhs] = useState<Record<string, string>>({});
   const [itemList, setItemList] = useState<{ id: string; name: string; sku: string }[]>([]);
   const [whList, setWhList] = useState<{ id: string; name: string }[]>([]);
+  const [projects, setProjects] = useState<{ id: string; name: string; code: string | null }[]>([]);
+  const [projectMap, setProjectMap] = useState<Record<string, { name: string; code: string | null }>>({});
+  const [profileMap, setProfileMap] = useState<Record<string, { full_name: string | null; email: string | null }>>({});
   const [tab, setTab] = useState<"pending" | "all" | "mine">("pending");
   const [noteFor, setNoteFor] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -69,14 +73,17 @@ const Requests = () => {
   const [reqWh, setReqWh] = useState("");
   const [reqQty, setReqQty] = useState("1");
   const [reqReason, setReqReason] = useState("");
+  const [reqProject, setReqProject] = useState<string>("__none__");
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<Req | null>(null);
 
   const load = async () => {
-    const [{ data: rs }, { data: its }, { data: ws }] = await Promise.all([
+    const [{ data: rs }, { data: its }, { data: ws }, { data: pj }, { data: pf }] = await Promise.all([
       supabase.from("stock_requests").select("*").order("created_at", { ascending: false }).limit(200),
       supabase.from("items").select("id, name, sku").order("name"),
       supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
+      supabase.from("projects").select("id,name,code").eq("is_active", true).order("name"),
+      supabase.from("profiles").select("id,full_name,email"),
     ]);
     setRows((rs ?? []) as Req[]);
     const im: Record<string, { name: string; sku: string }> = {};
@@ -87,6 +94,13 @@ const Requests = () => {
     (ws ?? []).forEach((w: any) => { wm[w.id] = w.name; });
     setWhs(wm);
     setWhList((ws ?? []) as any);
+    setProjects((pj ?? []) as any);
+    const pm: Record<string, { name: string; code: string | null }> = {};
+    (pj ?? []).forEach((p: any) => { pm[p.id] = { name: p.name, code: p.code }; });
+    setProjectMap(pm);
+    const um: Record<string, { full_name: string | null; email: string | null }> = {};
+    (pf ?? []).forEach((u: any) => { um[u.id] = { full_name: u.full_name, email: u.email }; });
+    setProfileMap(um);
   };
   useEffect(() => { load(); }, []);
 
@@ -113,6 +127,7 @@ const Requests = () => {
     setReqWh(whList[0]?.id ?? "");
     setReqQty("1");
     setReqReason("");
+    setReqProject("__none__");
     setOpenNew(true);
   };
 
@@ -129,12 +144,24 @@ const Requests = () => {
       quantity: qty,
       reason: reqReason.trim() || null,
       requested_by: user.id,
-    });
+      project_id: reqProject === "__none__" ? null : reqProject,
+    } as any);
     setSubmitting(false);
     if (error) return toast.error(error.message);
     toast.success("Request submitted — pending approval");
     setOpenNew(false);
     load();
+  };
+
+  const requesterLabel = (id: string) => {
+    const p = profileMap[id];
+    return p?.full_name || p?.email || (id === user?.id ? "You" : "—");
+  };
+  const projectLabel = (id: string | null) => {
+    if (!id) return "—";
+    const p = projectMap[id];
+    if (!p) return "—";
+    return `${p.code ? p.code + " · " : ""}${p.name}`;
   };
 
   return (
