@@ -669,6 +669,11 @@ const Items = () => {
             <div className="space-y-3 text-sm">
               <DRow label="Category">{categories.find((c) => c.id === detail.category_id)?.name ?? "—"}</DRow>
               <DRow label="Status">{detail.is_active ? <Badge variant="outline" className="border-primary/50 text-primary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}</DRow>
+              {detail.ref_number && <DRow label="Ref number">{detail.ref_number}</DRow>}
+              {detail.coding && <DRow label="Coding">{detail.coding}</DRow>}
+              {detail.source && <DRow label="Source">{detail.source}</DRow>}
+              {detail.uom && <DRow label="UOM">{detail.uom}</DRow>}
+              {detail.initial_quantity != null && <DRow label="Initial quantity">{detail.initial_quantity}</DRow>}
               <DRow label="Unit price">₱{Number(detail.unit_price).toFixed(2)}</DRow>
               <DRow label="Cost price">₱{Number(detail.cost_price).toFixed(2)}</DRow>
               <DRow label="Reorder level">{detail.reorder_level}</DRow>
