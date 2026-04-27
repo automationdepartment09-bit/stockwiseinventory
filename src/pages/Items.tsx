@@ -28,6 +28,8 @@ interface Item {
   id: string; sku: string; name: string; description: string | null;
   category_id: string | null; unit_price: number; cost_price: number; reorder_level: number;
   is_active: boolean; created_at: string;
+  ref_number: string | null; source: string | null; initial_quantity: number | null;
+  uom: string | null; coding: string | null; remarks: string | null;
 }
 interface Category { id: string; name: string; sku_prefix: string }
 interface Warehouse { id: string; name: string }
