@@ -209,15 +209,19 @@ const Movements = () => {
           </div>
           <Table>
             <TableHeader>
-              <TableRow><TableHead>When</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead>{canDelete && <TableHead className="text-right">Actions</TableHead>}</TableRow>
+              <TableRow><TableHead>When (date &amp; time)</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead>{canDelete && <TableHead className="text-right">Actions</TableHead>}</TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((m) => {
                 const it = itemMap.get(m.item_id);
                 const s = statusFor(m);
+                const d = new Date(m.created_at);
                 return (
                   <TableRow key={m.id}>
-                    <TableCell className="text-xs text-muted-foreground">{new Date(m.created_at).toLocaleString()}</TableCell>
+                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                      <div>{d.toLocaleDateString()}</div>
+                      <div className="tabular-nums">{d.toLocaleTimeString()}</div>
+                    </TableCell>
                     <TableCell><Badge variant="outline" className="gap-1">{typeIcon(m.movement_type)}{m.movement_type}</Badge></TableCell>
                     <TableCell className="font-medium">{it?.name ?? "—"} <span className="ml-1 font-mono text-xs text-muted-foreground">{it?.sku}</span></TableCell>
                     <TableCell>{m.quantity}</TableCell>
