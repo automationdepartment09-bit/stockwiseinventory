@@ -1,0 +1,1 @@
+ALTER TABLE public.stock_requests ADD COLUMN IF NOT EXISTS project_id uuid;

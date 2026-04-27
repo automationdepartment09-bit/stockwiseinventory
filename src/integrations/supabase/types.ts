@@ -349,6 +349,7 @@ export type Database = {
           created_at: string
           id: string
           item_id: string
+          project_id: string | null
           quantity: number
           reason: string | null
           requested_by: string
@@ -363,6 +364,7 @@ export type Database = {
           created_at?: string
           id?: string
           item_id: string
+          project_id?: string | null
           quantity: number
           reason?: string | null
           requested_by: string
@@ -377,6 +379,7 @@ export type Database = {
           created_at?: string
           id?: string
           item_id?: string
+          project_id?: string | null
           quantity?: number
           reason?: string | null
           requested_by?: string
