@@ -241,6 +241,78 @@ export type Database = {
         }
         Relationships: []
       }
+      returns: {
+        Row: {
+          attachment_name: string | null
+          attachment_url: string | null
+          condition: Database["public"]["Enums"]["return_condition"]
+          created_at: string
+          created_by: string
+          id: string
+          item_id: string
+          movement_id: string | null
+          notes: string | null
+          project_id: string | null
+          quantity: number
+          return_date: string
+          returned_by_name: string | null
+          returned_by_user_id: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["return_status"]
+          updated_at: string
+          warehouse_id: string
+          withdrawal_id: string | null
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          condition?: Database["public"]["Enums"]["return_condition"]
+          created_at?: string
+          created_by: string
+          id?: string
+          item_id: string
+          movement_id?: string | null
+          notes?: string | null
+          project_id?: string | null
+          quantity: number
+          return_date?: string
+          returned_by_name?: string | null
+          returned_by_user_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["return_status"]
+          updated_at?: string
+          warehouse_id: string
+          withdrawal_id?: string | null
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          condition?: Database["public"]["Enums"]["return_condition"]
+          created_at?: string
+          created_by?: string
+          id?: string
+          item_id?: string
+          movement_id?: string | null
+          notes?: string | null
+          project_id?: string | null
+          quantity?: number
+          return_date?: string
+          returned_by_name?: string | null
+          returned_by_user_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["return_status"]
+          updated_at?: string
+          warehouse_id?: string
+          withdrawal_id?: string | null
+        }
+        Relationships: []
+      }
       stock_levels: {
         Row: {
           id: string
@@ -670,6 +742,8 @@ export type Database = {
         | "on_arrival"
         | "arrived"
         | "received"
+      return_condition: "good" | "damaged" | "lost" | "partial"
+      return_status: "pending" | "completed" | "cancelled"
       stock_status:
         | "available"
         | "reserved"
@@ -814,6 +888,8 @@ export const Constants = {
         "arrived",
         "received",
       ],
+      return_condition: ["good", "damaged", "lost", "partial"],
+      return_status: ["pending", "completed", "cancelled"],
       stock_status: [
         "available",
         "reserved",
