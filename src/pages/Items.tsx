@@ -93,6 +93,12 @@ const Items = () => {
       cost_price: Number(fd.get("cost_price") ?? 0),
       reorder_level: Number(fd.get("reorder_level") ?? 0),
       is_active: String(fd.get("is_active") ?? "true") === "true",
+      ref_number: String(fd.get("ref_number") ?? "").trim() || null,
+      source: String(fd.get("source") ?? "").trim() || null,
+      initial_quantity: fd.get("initial_quantity") ? Number(fd.get("initial_quantity")) : null,
+      uom: String(fd.get("uom") ?? "").trim() || null,
+      coding: String(fd.get("coding") ?? "").trim() || null,
+      remarks: String(fd.get("remarks") ?? "").trim() || null,
     };
     if (!payload.name) return toast.error("Name required");
     setEditing(true);
