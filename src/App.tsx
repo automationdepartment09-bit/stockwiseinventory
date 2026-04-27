@@ -19,6 +19,7 @@ import Notifications from "./pages/Notifications";
 import Requests from "./pages/Requests";
 import Chat from "./pages/Chat";
 import Withdrawals from "./pages/Withdrawals";
+import Returns from "./pages/Returns";
 import Projects from "./pages/Projects";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/requests" element={<Requests />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/withdrawals" element={<Withdrawals />} />
+              <Route path="/returns" element={<Returns />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/history" element={<History />} />
               <Route path="/profile" element={<Profile />} />
