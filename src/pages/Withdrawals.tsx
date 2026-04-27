@@ -368,7 +368,10 @@ const Withdrawals = () => {
                   const isOwner = r.requested_by === user?.id;
                   return (
                     <TableRow key={r.id}>
-                      <TableCell className="whitespace-nowrap">{r.withdrawal_date}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <div>{r.withdrawal_date}</div>
+                        <div className="text-[10px] tabular-nums text-muted-foreground">submitted {new Date(r.created_at).toLocaleTimeString()} · {new Date(r.created_at).toLocaleDateString()}</div>
+                      </TableCell>
                       <TableCell>
                         <div className="font-medium">{it?.name ?? "—"}</div>
                         <div className="text-[10px] text-muted-foreground">{it?.sku}</div>
@@ -410,7 +413,8 @@ const Withdrawals = () => {
           <DialogHeader><DialogTitle>Withdrawal details</DialogTitle></DialogHeader>
           {view && (
             <div className="space-y-2 text-sm">
-              <Row label="Date">{view.withdrawal_date}</Row>
+              <Row label="Withdrawal date">{view.withdrawal_date}</Row>
+              <Row label="Submitted at">{new Date(view.created_at).toLocaleString()}</Row>
               <Row label="Item">{itemMap[view.item_id]?.name} <span className="text-muted-foreground">({itemMap[view.item_id]?.sku})</span></Row>
               <Row label="Warehouse">{whMap[view.warehouse_id]?.name}</Row>
               <Row label="Quantity">{view.quantity}</Row>
@@ -427,7 +431,7 @@ const Withdrawals = () => {
               )}
               <Row label="Status"><Badge className={statusBadge[view.status]}>{view.status}</Badge></Row>
               {view.review_note && <Row label="Review note">{view.review_note}</Row>}
-              <Row label="Created">{new Date(view.created_at).toLocaleString()}</Row>
+              {view.reviewed_at && <Row label="Reviewed at">{new Date(view.reviewed_at).toLocaleString()}</Row>}
             </div>
           )}
         </DialogContent>
