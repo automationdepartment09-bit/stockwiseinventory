@@ -19,6 +19,7 @@ import Notifications from "./pages/Notifications";
 import Requests from "./pages/Requests";
 import Chat from "./pages/Chat";
 import Withdrawals from "./pages/Withdrawals";
+import Returns from "./pages/Returns";
 import Projects from "./pages/Projects";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
