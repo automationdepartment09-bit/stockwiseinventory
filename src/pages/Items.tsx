@@ -679,6 +679,7 @@ const Items = () => {
               <DRow label="Reorder level">{detail.reorder_level}</DRow>
               <DRow label="Total stock">{stockMap.get(detail.id) ?? 0}</DRow>
               {detail.description && <DRow label="Description"><span className="whitespace-pre-wrap">{detail.description}</span></DRow>}
+              {detail.remarks && <DRow label="Remarks"><span className="whitespace-pre-wrap">{detail.remarks}</span></DRow>}
               <div>
                 <div className="mb-1 text-xs text-muted-foreground">Stock per warehouse</div>
                 <div className="space-y-1">
