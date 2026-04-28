@@ -53,6 +53,8 @@ const Movements = () => {
   const [reqStatusByRefId, setReqStatusByRefId] = useState<Record<string, ReqStatus>>({});
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"in"|"out"|"transfer"|"adjustment">("in");
+  const [fItemId, setFItemId] = useState<string>("");
+  const [fFromWh, setFFromWh] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "manual" | ReqStatus>("all");
   const [toDelete, setToDelete] = useState<Move | null>(null);
   const [deleting, setDeleting] = useState(false);
