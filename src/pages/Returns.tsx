@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip, Undo2 } from "lucide-react";
 import { toast } from "sonner";
+import { ItemPicker } from "@/components/ItemPicker";
 
 type Status = "pending" | "completed" | "cancelled";
 type Condition = "good" | "damaged" | "lost" | "partial";
@@ -292,10 +293,7 @@ const Returns = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label>Item *</Label>
-                      <Select value={fItem} onValueChange={setFItem}>
-                        <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-                        <SelectContent>{items.map((i) => (<SelectItem key={i.id} value={i.id}>{i.sku} · {i.name}</SelectItem>))}</SelectContent>
-                      </Select>
+                      <ItemPicker value={fItem} onChange={setFItem} warehouseId={fWarehouse || undefined} />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Warehouse *</Label>

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ArrowDown, ArrowRightLeft, ArrowUp, Plus, Sliders, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { ItemPicker } from "@/components/ItemPicker";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -53,6 +54,8 @@ const Movements = () => {
   const [reqStatusByRefId, setReqStatusByRefId] = useState<Record<string, ReqStatus>>({});
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"in"|"out"|"transfer"|"adjustment">("in");
+  const [fItemId, setFItemId] = useState<string>("");
+  const [fFromWh, setFFromWh] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "manual" | ReqStatus>("all");
   const [toDelete, setToDelete] = useState<Move | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -101,7 +104,7 @@ const Movements = () => {
       item_id, movement_type: type, quantity, from_warehouse_id, to_warehouse_id, reason, reference, created_by: user?.id,
     });
     if (error) return toast.error(error.message);
-    toast.success("Stock updated"); setOpen(false); load();
+    toast.success("Stock updated"); setOpen(false); setFItemId(""); setFFromWh(""); load();
   };
 
   const itemMap = new Map(items.map(i=>[i.id,i]));
@@ -157,10 +160,8 @@ const Movements = () => {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Item</Label>
-                  <Select name="item_id">
-                    <SelectTrigger><SelectValue placeholder="Choose item…" /></SelectTrigger>
-                    <SelectContent>{items.map(i=><SelectItem key={i.id} value={i.id}>{i.sku} — {i.name}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <ItemPicker value={fItemId} onChange={setFItemId} warehouseId={(type === "out" || type === "transfer") ? (fFromWh || undefined) : undefined} />
+                  <input type="hidden" name="item_id" value={fItemId} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Quantity</Label>
@@ -169,7 +170,7 @@ const Movements = () => {
                 {(type === "out" || type === "transfer") && (
                   <div className="space-y-1.5">
                     <Label>From warehouse</Label>
-                    <Select name="from_warehouse_id">
+                    <Select name="from_warehouse_id" value={fFromWh} onValueChange={setFFromWh}>
                       <SelectTrigger><SelectValue placeholder="Source…" /></SelectTrigger>
                       <SelectContent>{warehouses.map(w=><SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
                     </Select>

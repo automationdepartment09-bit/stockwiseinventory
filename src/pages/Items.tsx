@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus, Trash2, Pencil, ArrowLeftRight, ClipboardCheck, Undo2, History as HistoryIcon, PackageMinus } from "lucide-react";
 import { toast } from "sonner";
+import { ItemPicker } from "@/components/ItemPicker";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -463,16 +464,7 @@ const Items = () => {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Item</Label>
-              <Select value={addItemId} onValueChange={setAddItemId}>
-                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-                <SelectContent>
-                  {items.map((it) => (
-                    <SelectItem key={it.id} value={it.id}>
-                      {it.name} <span className="ml-1 font-mono text-xs text-muted-foreground">({it.sku})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ItemPicker value={addItemId} onChange={setAddItemId} warehouseId={addWh || undefined} />
             </div>
             <div className="space-y-1.5">
               <Label>Warehouse</Label>
