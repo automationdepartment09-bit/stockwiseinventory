@@ -159,10 +159,8 @@ const Movements = () => {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Item</Label>
-                  <Select name="item_id">
-                    <SelectTrigger><SelectValue placeholder="Choose item…" /></SelectTrigger>
-                    <SelectContent>{items.map(i=><SelectItem key={i.id} value={i.id}>{i.sku} — {i.name}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <ItemPicker value={fItemId} onChange={setFItemId} warehouseId={(type === "out" || type === "transfer") ? (fFromWh || undefined) : undefined} />
+                  <input type="hidden" name="item_id" value={fItemId} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Quantity</Label>
@@ -171,7 +169,7 @@ const Movements = () => {
                 {(type === "out" || type === "transfer") && (
                   <div className="space-y-1.5">
                     <Label>From warehouse</Label>
-                    <Select name="from_warehouse_id">
+                    <Select name="from_warehouse_id" value={fFromWh} onValueChange={setFFromWh}>
                       <SelectTrigger><SelectValue placeholder="Source…" /></SelectTrigger>
                       <SelectContent>{warehouses.map(w=><SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
                     </Select>
