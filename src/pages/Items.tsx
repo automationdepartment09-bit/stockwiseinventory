@@ -57,11 +57,6 @@ const Items = () => {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [withdrawItem, setWithdrawItem] = useState<Item | null>(null);
-  const [withdrawWh, setWithdrawWh] = useState<string>("");
-  const [withdrawQty, setWithdrawQty] = useState<string>("1");
-  const [withdrawReason, setWithdrawReason] = useState<string>("");
-  const [withdrawing, setWithdrawing] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addItemId, setAddItemId] = useState<string>("");
   const [addWh, setAddWh] = useState<string>("");
