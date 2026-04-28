@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { ArrowDown, ArrowRightLeft, ArrowUp, Plus, Sliders, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { ItemPicker } from "@/components/ItemPicker";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
