@@ -104,7 +104,7 @@ const Movements = () => {
       item_id, movement_type: type, quantity, from_warehouse_id, to_warehouse_id, reason, reference, created_by: user?.id,
     });
     if (error) return toast.error(error.message);
-    toast.success("Stock updated"); setOpen(false); load();
+    toast.success("Stock updated"); setOpen(false); setFItemId(""); setFFromWh(""); load();
   };
 
   const itemMap = new Map(items.map(i=>[i.id,i]));
