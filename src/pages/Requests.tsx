@@ -270,16 +270,7 @@ const Requests = () => {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Item</Label>
-              <Select value={reqItem} onValueChange={setReqItem}>
-                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-                <SelectContent>
-                  {itemList.map((it) => (
-                    <SelectItem key={it.id} value={it.id}>
-                      {it.name} <span className="ml-1 font-mono text-xs text-muted-foreground">({it.sku})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ItemPicker value={reqItem} onChange={setReqItem} warehouseId={reqWh || undefined} />
             </div>
             <div className="space-y-1.5">
               <Label>Warehouse</Label>
