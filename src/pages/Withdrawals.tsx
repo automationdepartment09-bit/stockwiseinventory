@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -105,6 +106,17 @@ const Withdrawals = () => {
   };
 
   useEffect(() => { loadAll(); }, []);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const itemParam = searchParams.get("item");
+    if (itemParam && items.some((i) => i.id === itemParam) && canCreate) {
+      setFItem(itemParam);
+      setOpen(true);
+      searchParams.delete("item");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [items, searchParams, canCreate, setSearchParams]);
 
   const itemMap = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
   const whMap = useMemo(() => Object.fromEntries(warehouses.map((w) => [w.id, w])), [warehouses]);
