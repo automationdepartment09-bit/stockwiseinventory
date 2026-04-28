@@ -256,39 +256,7 @@ const Items = () => {
     setAddOpen(false);
   };
 
-  const openWithdraw = (it: Item) => {
-    setWithdrawItem(it);
-    const rows = stockByWh.get(it.id) ?? [];
-    const firstWithStock = rows.find((r) => r.quantity > 0);
-    setWithdrawWh(firstWithStock?.warehouse_id ?? rows[0]?.warehouse_id ?? "");
-    setWithdrawQty("1");
-    setWithdrawReason("");
-  };
 
-  const submitWithdraw = async () => {
-    if (!withdrawItem) return;
-    const qty = Number(withdrawQty);
-    if (!withdrawWh) return toast.error("Select a warehouse");
-    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
-    const available = (stockByWh.get(withdrawItem.id) ?? []).find((r) => r.warehouse_id === withdrawWh)?.quantity ?? 0;
-    if (qty > available) return toast.error(`Only ${available} available in this warehouse`);
-    setWithdrawing(true);
-    const { error } = await supabase.from("stock_movements").insert({
-      item_id: withdrawItem.id,
-      movement_type: "out",
-      quantity: qty,
-      from_warehouse_id: withdrawWh,
-      to_warehouse_id: null,
-      reason: withdrawReason.trim() || "Withdrawal",
-      reference: null,
-      created_by: user?.id,
-    });
-    setWithdrawing(false);
-    if (error) return toast.error(error.message);
-    toast.success(`Withdrew ${qty} × ${withdrawItem.name}`);
-    setWithdrawItem(null);
-    load();
-  };
 
   return (
     <div className="space-y-4">
