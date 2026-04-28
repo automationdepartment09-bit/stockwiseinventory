@@ -463,16 +463,7 @@ const Items = () => {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Item</Label>
-              <Select value={addItemId} onValueChange={setAddItemId}>
-                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-                <SelectContent>
-                  {items.map((it) => (
-                    <SelectItem key={it.id} value={it.id}>
-                      {it.name} <span className="ml-1 font-mono text-xs text-muted-foreground">({it.sku})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ItemPicker value={addItemId} onChange={setAddItemId} warehouseId={addWh || undefined} />
             </div>
             <div className="space-y-1.5">
               <Label>Warehouse</Label>
