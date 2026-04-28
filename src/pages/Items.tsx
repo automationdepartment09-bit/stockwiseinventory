@@ -450,7 +450,7 @@ const Items = () => {
                             size="sm"
                             variant="outline"
                             disabled={stock <= 0}
-                            onClick={() => openWithdraw(it)}
+                            onClick={() => navigate(`/withdrawals?item=${it.id}`)}
                           >
                             <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
                           </Button>
