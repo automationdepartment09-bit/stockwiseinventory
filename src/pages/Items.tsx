@@ -38,10 +38,13 @@ interface StockRow { item_id: string; warehouse_id: string; quantity: number }
 
 const Items = () => {
   const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
   const canEdit = hasRole("admin", "manager");
   const canWithdraw = hasRole("admin", "manager", "staff");
   const canDelete = hasRole("admin");
   const [params, setParams] = useSearchParams();
+  const [itemHistory, setItemHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
   const [stockByWh, setStockByWh] = useState<Map<string, StockRow[]>>(new Map());
