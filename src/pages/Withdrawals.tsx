@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip } from "lucide-react";
 import { toast } from "sonner";
+import { ItemPicker } from "@/components/ItemPicker";
 
 type Status = "pending" | "approved" | "rejected" | "cancelled";
 interface Withdrawal {
