@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -14,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus, Trash2, Pencil } from "lucide-react";
+import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus, Trash2, Pencil, ArrowLeftRight, ClipboardCheck, Undo2, History as HistoryIcon, PackageMinus } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -37,10 +38,13 @@ interface StockRow { item_id: string; warehouse_id: string; quantity: number }
 
 const Items = () => {
   const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
   const canEdit = hasRole("admin", "manager");
   const canWithdraw = hasRole("admin", "manager", "staff");
   const canDelete = hasRole("admin");
   const [params, setParams] = useSearchParams();
+  const [itemHistory, setItemHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
   const [stockByWh, setStockByWh] = useState<Map<string, StockRow[]>>(new Map());
@@ -133,6 +137,28 @@ const Items = () => {
   };
   useEffect(() => { load(); }, []);
   useEffect(() => { setSearch(params.get("q") ?? ""); }, [params]);
+
+  useEffect(() => {
+    const id = detail?.id;
+    if (!id) { setItemHistory([]); return; }
+    (async () => {
+      setLoadingHistory(true);
+      const [mv, wd, rq, rt] = await Promise.all([
+        supabase.from("stock_movements").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("withdrawals").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("stock_requests").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("returns").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100),
+      ]);
+      const list: any[] = [];
+      (mv.data ?? []).forEach((x: any) => list.push({ kind: x.movement_type === "transfer" ? "transfer" : (x.movement_type === "in" ? "stock_in" : "stock_out"), date: x.created_at, qty: x.quantity, note: x.reason, ref: x.reference, raw: x }));
+      (wd.data ?? []).forEach((x: any) => list.push({ kind: "withdrawal", date: x.created_at, qty: x.quantity, note: x.purpose, status: x.status, raw: x }));
+      (rq.data ?? []).forEach((x: any) => list.push({ kind: "request", date: x.created_at, qty: x.quantity, note: x.reason, status: x.status, raw: x }));
+      (rt.data ?? []).forEach((x: any) => list.push({ kind: "return", date: x.created_at, qty: x.quantity, note: x.notes, status: x.status, raw: x }));
+      list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setItemHistory(list);
+      setLoadingHistory(false);
+    })();
+  }, [detail?.id]);
 
   const stockFor = (itemId: string) => {
     if (warehouseFilter === "all") return stockMap.get(itemId) ?? 0;
@@ -660,40 +686,122 @@ const Items = () => {
         </AlertDialogContent>
       </AlertDialog>
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{detail?.name}</DialogTitle>
             <DialogDescription className="font-mono text-xs">{detail?.sku}</DialogDescription>
           </DialogHeader>
           {detail && (
-            <div className="space-y-3 text-sm">
-              <DRow label="Category">{categories.find((c) => c.id === detail.category_id)?.name ?? "—"}</DRow>
-              <DRow label="Status">{detail.is_active ? <Badge variant="outline" className="border-primary/50 text-primary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}</DRow>
-              {detail.ref_number && <DRow label="Ref number">{detail.ref_number}</DRow>}
-              {detail.coding && <DRow label="Coding">{detail.coding}</DRow>}
-              {detail.source && <DRow label="Source">{detail.source}</DRow>}
-              {detail.uom && <DRow label="UOM">{detail.uom}</DRow>}
-              {detail.initial_quantity != null && <DRow label="Initial quantity">{detail.initial_quantity}</DRow>}
-              <DRow label="Unit price">₱{Number(detail.unit_price).toFixed(2)}</DRow>
-              <DRow label="Cost price">₱{Number(detail.cost_price).toFixed(2)}</DRow>
-              <DRow label="Reorder level">{detail.reorder_level}</DRow>
-              <DRow label="Total stock">{stockMap.get(detail.id) ?? 0}</DRow>
-              {detail.description && <DRow label="Description"><span className="whitespace-pre-wrap">{detail.description}</span></DRow>}
-              {detail.remarks && <DRow label="Remarks"><span className="whitespace-pre-wrap">{detail.remarks}</span></DRow>}
-              <div>
-                <div className="mb-1 text-xs text-muted-foreground">Stock per warehouse</div>
-                <div className="space-y-1">
-                  {(stockByWh.get(detail.id) ?? []).length === 0 && <div className="text-xs text-muted-foreground">No stock anywhere.</div>}
-                  {(stockByWh.get(detail.id) ?? []).map((r) => (
-                    <div key={r.warehouse_id} className="flex items-center justify-between rounded border border-border px-2 py-1">
-                      <span>{warehouses.find((w) => w.id === r.warehouse_id)?.name ?? "—"}</span>
-                      <span className="font-medium tabular-nums">{r.quantity}</span>
-                    </div>
-                  ))}
+            <Tabs defaultValue="details">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="actions">Actions</TabsTrigger>
+                <TabsTrigger value="history">History ({itemHistory.length})</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="details" className="space-y-3 text-sm">
+                <DRow label="Category">{categories.find((c) => c.id === detail.category_id)?.name ?? "—"}</DRow>
+                <DRow label="Status">{detail.is_active ? <Badge variant="outline" className="border-primary/50 text-primary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}</DRow>
+                {detail.ref_number && <DRow label="Ref number">{detail.ref_number}</DRow>}
+                {detail.coding && <DRow label="Coding">{detail.coding}</DRow>}
+                {detail.source && <DRow label="Source">{detail.source}</DRow>}
+                {detail.uom && <DRow label="UOM">{detail.uom}</DRow>}
+                {detail.initial_quantity != null && <DRow label="Initial quantity">{detail.initial_quantity}</DRow>}
+                <DRow label="Unit price">₱{Number(detail.unit_price).toFixed(2)}</DRow>
+                <DRow label="Cost price">₱{Number(detail.cost_price).toFixed(2)}</DRow>
+                <DRow label="Reorder level">{detail.reorder_level}</DRow>
+                <DRow label="Total stock">{stockMap.get(detail.id) ?? 0}</DRow>
+                {detail.description && <DRow label="Description"><span className="whitespace-pre-wrap">{detail.description}</span></DRow>}
+                {detail.remarks && <DRow label="Remarks"><span className="whitespace-pre-wrap">{detail.remarks}</span></DRow>}
+                <div>
+                  <div className="mb-1 text-xs text-muted-foreground">Stock per warehouse</div>
+                  <div className="space-y-1">
+                    {(stockByWh.get(detail.id) ?? []).length === 0 && <div className="text-xs text-muted-foreground">No stock anywhere.</div>}
+                    {(stockByWh.get(detail.id) ?? []).map((r) => (
+                      <div key={r.warehouse_id} className="flex items-center justify-between rounded border border-border px-2 py-1">
+                        <span>{warehouses.find((w) => w.id === r.warehouse_id)?.name ?? "—"}</span>
+                        <span className="font-medium tabular-nums">{r.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="text-xs text-muted-foreground">Created {new Date(detail.created_at).toLocaleString()}</div>
-            </div>
+                <div className="text-xs text-muted-foreground">Created {new Date(detail.created_at).toLocaleString()}</div>
+              </TabsContent>
+
+              <TabsContent value="actions">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <Button variant="outline" className="justify-start" onClick={() => { const it = detail; setDetail(null); openAdd(it); }}>
+                    <PackagePlus className="mr-2 h-4 w-4" />Add stock
+                  </Button>
+                  {canEdit && (
+                    <Button variant="outline" className="justify-start" onClick={() => { const it = detail; setDetail(null); setEditItem(it); }}>
+                      <Pencil className="mr-2 h-4 w-4" />Edit
+                    </Button>
+                  )}
+                  <Button variant="outline" className="justify-start" onClick={() => navigate(`/movements?item=${detail.id}&type=transfer`)}>
+                    <ArrowLeftRight className="mr-2 h-4 w-4" />Transfer
+                  </Button>
+                  <Button variant="outline" className="justify-start" onClick={() => navigate(`/movements?item=${detail.id}`)}>
+                    <ArrowUpDown className="mr-2 h-4 w-4" />Movement
+                  </Button>
+                  <Button variant="outline" className="justify-start" onClick={() => navigate(`/requests?item=${detail.id}`)}>
+                    <ClipboardCheck className="mr-2 h-4 w-4" />Request
+                  </Button>
+                  {canWithdraw && (
+                    <Button
+                      variant="outline"
+                      className="justify-start"
+                      disabled={(stockMap.get(detail.id) ?? 0) <= 0}
+                      onClick={() => navigate(`/withdrawals?item=${detail.id}`)}
+                    >
+                      <ArrowDownToLine className="mr-2 h-4 w-4" />Withdraw
+                    </Button>
+                  )}
+                  <Button variant="outline" className="justify-start" onClick={() => navigate(`/withdrawals?item=${detail.id}&borrow=1`)}>
+                    <PackageMinus className="mr-2 h-4 w-4" />Borrow
+                  </Button>
+                  <Button variant="outline" className="justify-start" onClick={() => navigate(`/returns?item=${detail.id}`)}>
+                    <Undo2 className="mr-2 h-4 w-4" />Return
+                  </Button>
+                  {canDelete && (
+                    <Button variant="outline" className="justify-start text-destructive hover:text-destructive" onClick={() => { const it = detail; setDetail(null); setToDelete(it); }}>
+                      <Trash2 className="mr-2 h-4 w-4" />Delete
+                    </Button>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="history">
+                <div className="max-h-[420px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>When</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead>Note</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loadingHistory && <TableRow><TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">Loading…</TableCell></TableRow>}
+                      {!loadingHistory && itemHistory.length === 0 && (
+                        <TableRow><TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground"><HistoryIcon className="mx-auto mb-2 h-5 w-5 opacity-50" />No history yet.</TableCell></TableRow>
+                      )}
+                      {itemHistory.map((h, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Badge variant="outline" className="capitalize">{h.kind.replace("_"," ")}</Badge></TableCell>
+                          <TableCell className="whitespace-nowrap text-xs">{new Date(h.date).toLocaleString()}</TableCell>
+                          <TableCell className="text-right tabular-nums">{h.qty ?? "—"}</TableCell>
+                          <TableCell className="max-w-[200px] truncate text-xs">{h.note ?? "—"}</TableCell>
+                          <TableCell>{h.status ? <Badge variant="outline">{h.status}</Badge> : "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
