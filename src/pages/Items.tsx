@@ -138,6 +138,28 @@ const Items = () => {
   useEffect(() => { load(); }, []);
   useEffect(() => { setSearch(params.get("q") ?? ""); }, [params]);
 
+  useEffect(() => {
+    const id = detail?.id;
+    if (!id) { setItemHistory([]); return; }
+    (async () => {
+      setLoadingHistory(true);
+      const [mv, wd, rq, rt] = await Promise.all([
+        supabase.from("stock_movements").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("withdrawals").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("stock_requests").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("returns").select("*").eq("item_id", id).order("created_at", { ascending: false }).limit(100),
+      ]);
+      const list: any[] = [];
+      (mv.data ?? []).forEach((x: any) => list.push({ kind: x.movement_type === "transfer" ? "transfer" : (x.movement_type === "in" ? "stock_in" : "stock_out"), date: x.created_at, qty: x.quantity, note: x.reason, ref: x.reference, raw: x }));
+      (wd.data ?? []).forEach((x: any) => list.push({ kind: "withdrawal", date: x.created_at, qty: x.quantity, note: x.purpose, status: x.status, raw: x }));
+      (rq.data ?? []).forEach((x: any) => list.push({ kind: "request", date: x.created_at, qty: x.quantity, note: x.reason, status: x.status, raw: x }));
+      (rt.data ?? []).forEach((x: any) => list.push({ kind: "return", date: x.created_at, qty: x.quantity, note: x.notes, status: x.status, raw: x }));
+      list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setItemHistory(list);
+      setLoadingHistory(false);
+    })();
+  }, [detail?.id]);
+
   const stockFor = (itemId: string) => {
     if (warehouseFilter === "all") return stockMap.get(itemId) ?? 0;
     return (stockByWh.get(itemId) ?? []).find((r) => r.warehouse_id === warehouseFilter)?.quantity ?? 0;
