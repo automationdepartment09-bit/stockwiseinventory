@@ -57,11 +57,6 @@ const Items = () => {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [withdrawItem, setWithdrawItem] = useState<Item | null>(null);
-  const [withdrawWh, setWithdrawWh] = useState<string>("");
-  const [withdrawQty, setWithdrawQty] = useState<string>("1");
-  const [withdrawReason, setWithdrawReason] = useState<string>("");
-  const [withdrawing, setWithdrawing] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addItemId, setAddItemId] = useState<string>("");
   const [addWh, setAddWh] = useState<string>("");
@@ -256,39 +251,7 @@ const Items = () => {
     setAddOpen(false);
   };
 
-  const openWithdraw = (it: Item) => {
-    setWithdrawItem(it);
-    const rows = stockByWh.get(it.id) ?? [];
-    const firstWithStock = rows.find((r) => r.quantity > 0);
-    setWithdrawWh(firstWithStock?.warehouse_id ?? rows[0]?.warehouse_id ?? "");
-    setWithdrawQty("1");
-    setWithdrawReason("");
-  };
 
-  const submitWithdraw = async () => {
-    if (!withdrawItem) return;
-    const qty = Number(withdrawQty);
-    if (!withdrawWh) return toast.error("Select a warehouse");
-    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
-    const available = (stockByWh.get(withdrawItem.id) ?? []).find((r) => r.warehouse_id === withdrawWh)?.quantity ?? 0;
-    if (qty > available) return toast.error(`Only ${available} available in this warehouse`);
-    setWithdrawing(true);
-    const { error } = await supabase.from("stock_movements").insert({
-      item_id: withdrawItem.id,
-      movement_type: "out",
-      quantity: qty,
-      from_warehouse_id: withdrawWh,
-      to_warehouse_id: null,
-      reason: withdrawReason.trim() || "Withdrawal",
-      reference: null,
-      created_by: user?.id,
-    });
-    setWithdrawing(false);
-    if (error) return toast.error(error.message);
-    toast.success(`Withdrew ${qty} × ${withdrawItem.name}`);
-    setWithdrawItem(null);
-    load();
-  };
 
   return (
     <div className="space-y-4">
@@ -450,7 +413,7 @@ const Items = () => {
                             size="sm"
                             variant="outline"
                             disabled={stock <= 0}
-                            onClick={() => openWithdraw(it)}
+                            onClick={() => navigate(`/withdrawals?item=${it.id}`)}
                           >
                             <ArrowDownToLine className="mr-1 h-3.5 w-3.5" />Withdraw
                           </Button>
@@ -487,49 +450,7 @@ const Items = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={!!withdrawItem} onOpenChange={(o) => !o && setWithdrawItem(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Withdraw stock</DialogTitle>
-            <DialogDescription>
-              {withdrawItem ? <>Item: <span className="font-medium">{withdrawItem.name}</span> <span className="font-mono text-xs text-muted-foreground">({withdrawItem.sku})</span></> : null}
-            </DialogDescription>
-          </DialogHeader>
-          {withdrawItem && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>From warehouse</Label>
-                <Select value={withdrawWh} onValueChange={setWithdrawWh}>
-                  <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
-                  <SelectContent>
-                    {warehouses.map((w) => {
-                      const q = (stockByWh.get(withdrawItem.id) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0;
-                      return <SelectItem key={w.id} value={w.id} disabled={q <= 0}>{w.name} — {q} on hand</SelectItem>;
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Quantity</Label>
-                <Input type="number" min="1" value={withdrawQty} onChange={(e) => setWithdrawQty(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Reason (optional)</Label>
-                <Input value={withdrawReason} onChange={(e) => setWithdrawReason(e.target.value)} placeholder="Sale, damage, internal use…" maxLength={200} />
-              </div>
-              <div className="rounded-md border border-border bg-muted/30 p-2 text-xs text-muted-foreground">
-                Estimated value: <span className="font-medium text-foreground">₱{(Number(withdrawItem.unit_price) * (Number(withdrawQty) || 0)).toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWithdrawItem(null)}>Cancel</Button>
-            <Button onClick={submitWithdraw} disabled={withdrawing}>
-              {withdrawing ? "Withdrawing…" : "Confirm withdrawal"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
