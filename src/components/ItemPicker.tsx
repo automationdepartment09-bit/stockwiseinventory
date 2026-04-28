@@ -59,13 +59,13 @@ export const ItemPicker = ({
   useEffect(() => {
     let active = true;
     (async () => {
-      const tasks: Promise<any>[] = [];
-      if (!itemsProp) {
-        tasks.push(supabase.from("items").select("id,name,sku,barcode,ref_number,category_id").eq("is_active", true).order("name"));
-      } else { tasks.push(Promise.resolve(null)); }
-      tasks.push(supabase.from("categories").select("id,name").order("name"));
-      tasks.push(supabase.from("stock_levels").select("item_id,warehouse_id,quantity"));
-      const [it, cat, st] = await Promise.all(tasks);
+      const [it, cat, st] = await Promise.all([
+        itemsProp
+          ? Promise.resolve({ data: null } as any)
+          : supabase.from("items").select("id,name,sku,barcode,ref_number,category_id").eq("is_active", true).order("name"),
+        supabase.from("categories").select("id,name").order("name"),
+        supabase.from("stock_levels").select("item_id,warehouse_id,quantity"),
+      ]);
       if (!active) return;
       if (!itemsProp && it?.data) setItems(it.data as PickerItem[]);
       if (cat?.data) setCategories(cat.data as Category[]);
