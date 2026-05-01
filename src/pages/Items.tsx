@@ -51,9 +51,7 @@ const Items = () => {
   const [stockByWh, setStockByWh] = useState<Map<string, StockRow[]>>(new Map());
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [search, setSearch] = useState(params.get("q") ?? "");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
+  const [filters, setFilters] = useState<FilterValues>({ ...EMPTY_FILTERS, q: params.get("q") ?? "" });
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
