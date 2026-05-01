@@ -173,20 +173,16 @@ const Stock = () => {
       />
       <Card className="glass-card">
         <CardContent className="p-4">
-          <div className="mb-4 flex flex-wrap gap-2">
-            <div className="relative min-w-[260px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search item name or SKU…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
-                  <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="mb-4">
+            <FilterBar
+              values={filters}
+              onChange={setFilters}
+              searchPlaceholder="Search item name or SKU…"
+              show={{ q: true, category: true, warehouse: true, status: true }}
+              categories={categories.map((c) => ({ value: c.id, label: c.name }))}
+              warehouses={whs.map((w) => ({ value: w.id, label: w.name }))}
+              statuses={(Object.keys(STATUS_LABEL) as Status[]).map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+            />
           </div>
 
           <Table>
