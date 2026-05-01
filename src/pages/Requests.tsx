@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -104,6 +105,22 @@ const Requests = () => {
     setProfileMap(um);
   };
   useEffect(() => { load(); }, []);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const itemParam = searchParams.get("item");
+    if (itemParam) {
+      setReqItem(itemParam);
+      setReqWh(whList[0]?.id ?? "");
+      setReqQty("1");
+      setReqReason("");
+      setReqProject("__none__");
+      setOpenNew(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("item");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, whList, setSearchParams]);
 
   const filtered = rows.filter((r) => {
     if (tab === "pending") return r.status !== "received" && r.status !== "rejected";

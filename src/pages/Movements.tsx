@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -86,6 +87,23 @@ const Movements = () => {
     setReqStatusByRefId(map);
   };
   useEffect(() => { load(); }, []);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const itemParam = searchParams.get("item");
+    const typeParam = searchParams.get("type");
+    if (itemParam || typeParam) {
+      if (typeParam === "in" || typeParam === "out" || typeParam === "transfer" || typeParam === "adjustment") {
+        setType(typeParam);
+      }
+      if (itemParam) setFItemId(itemParam);
+      setOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("item");
+      next.delete("type");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const create = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
