@@ -77,15 +77,17 @@ const Movements = () => {
   };
 
   const load = async () => {
-    const [{ data: m }, { data: it }, { data: wh }, { data: rq }] = await Promise.all([
-      supabase.from("stock_movements").select("*").order("created_at", { ascending: false }).limit(100),
-      supabase.from("items").select("id, name, sku").order("name"),
+    const [{ data: m }, { data: it }, { data: wh }, { data: rq }, { data: cats }] = await Promise.all([
+      supabase.from("stock_movements").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.from("items").select("id, name, sku, category_id").order("name"),
       supabase.from("warehouses").select("id, name").order("name"),
       supabase.from("stock_requests").select("id, status"),
+      supabase.from("categories").select("id, name").order("name"),
     ]);
     setMoves((m ?? []) as Move[]);
-    setItems(it ?? []);
+    setItems((it ?? []) as any);
     setWarehouses(wh ?? []);
+    setCategories(cats ?? []);
     const map: Record<string, ReqStatus> = {};
     (rq ?? []).forEach((r: any) => { map[r.id] = r.status as ReqStatus; });
     setReqStatusByRefId(map);
