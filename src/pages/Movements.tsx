@@ -233,19 +233,38 @@ const Movements = () => {
       />
       <Card className="glass-card">
         <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-end gap-2">
-            <Label className="text-xs text-muted-foreground">Status</Label>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-              <SelectTrigger className="h-8 w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTER_VALUES.map((v) => (
-                  <SelectItem key={v} value={v}>
-                    {v === "all" ? "All" : v === "manual" ? "Manual (no request)" : STATUS_LABEL[v]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterBar
+            values={filters}
+            onChange={setFilters}
+            searchPlaceholder="Search item, reason, reference…"
+            show={{ q: true, category: true, warehouse: true, from: true, to: true }}
+            categories={categories.map((c) => ({ value: c.id, label: c.name }))}
+            warehouses={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+            rightSlot={
+              <>
+                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
+                  <SelectTrigger className="h-9 w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="in">Stock in</SelectItem>
+                    <SelectItem value="out">Stock out</SelectItem>
+                    <SelectItem value="transfer">Transfer</SelectItem>
+                    <SelectItem value="adjustment">Adjustment</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+                  <SelectTrigger className="h-9 w-[170px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {STATUS_FILTER_VALUES.map((v) => (
+                      <SelectItem key={v} value={v}>
+                        {v === "all" ? "All req. statuses" : v === "manual" ? "Manual (no request)" : STATUS_LABEL[v]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            }
+          />
           <Table>
             <TableHeader>
               <TableRow><TableHead>When (date &amp; time)</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead>{canDelete && <TableHead className="text-right">Actions</TableHead>}</TableRow>
