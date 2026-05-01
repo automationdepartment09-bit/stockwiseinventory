@@ -358,30 +358,23 @@ const Items = () => {
 
       <Card className="glass-card">
         <CardContent className="p-4">
-          <div className="mb-4 flex flex-wrap gap-2">
-            <div className="relative min-w-[260px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search name or SKU…"
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); if (e.target.value) setParams({ q: e.target.value }); else setParams({}); }}
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All warehouses (overall)</SelectItem>
-                {warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <div className="mb-4">
+            <FilterBar
+              values={filters}
+              onChange={(next) => {
+                setFilters(next);
+                if (next.q) setParams({ q: next.q }); else setParams({});
+              }}
+              searchPlaceholder="Search name, SKU, ref, barcode…"
+              show={{ q: true, category: true, warehouse: true, status: true }}
+              categories={categories.map((c) => ({ value: c.id, label: c.name }))}
+              warehouses={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+              statuses={[
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+                { value: "low", label: "Low stock" },
+              ]}
+            />
           </div>
 
           <Table>
