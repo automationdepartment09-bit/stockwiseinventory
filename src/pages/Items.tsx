@@ -131,7 +131,7 @@ const Items = () => {
     setWarehouses((whs ?? []) as Warehouse[]);
   };
   useEffect(() => { load(); }, []);
-  useEffect(() => { setSearch(params.get("q") ?? ""); }, [params]);
+  useEffect(() => { setFilters((f) => ({ ...f, q: params.get("q") ?? "" })); }, [params]);
 
   useEffect(() => {
     const id = detail?.id;
@@ -156,16 +156,27 @@ const Items = () => {
   }, [detail?.id]);
 
   const stockFor = (itemId: string) => {
-    if (warehouseFilter === "all") return stockMap.get(itemId) ?? 0;
-    return (stockByWh.get(itemId) ?? []).find((r) => r.warehouse_id === warehouseFilter)?.quantity ?? 0;
+    if (filters.warehouse === "all") return stockMap.get(itemId) ?? 0;
+    return (stockByWh.get(itemId) ?? []).find((r) => r.warehouse_id === filters.warehouse)?.quantity ?? 0;
   };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     let list = items.filter((it) => {
-      const matchQ = !q || it.name.toLowerCase().includes(q) || it.sku.toLowerCase().includes(q);
-      const matchCat = categoryFilter === "all" || it.category_id === categoryFilter;
-      return matchQ && matchCat;
+      if (!matchesQuery(filters.q, [it.name, it.sku, it.ref_number, it.coding, (it as any).barcode])) return false;
+      if (filters.category !== "all" && it.category_id !== filters.category) return false;
+      if (filters.status === "active" && !it.is_active) return false;
+      if (filters.status === "inactive" && it.is_active) return false;
+      if (filters.status === "low") {
+        const overall = stockMap.get(it.id) ?? 0;
+        if (!(it.reorder_level > 0 && overall <= it.reorder_level)) return false;
+      }
+      if (filters.warehouse !== "all") {
+        const here = (stockByWh.get(it.id) ?? []).find((r) => r.warehouse_id === filters.warehouse)?.quantity ?? 0;
+        if (here <= 0 && filters.status !== "inactive") {
+          // show all matching items even if 0 in selected warehouse — just compute stockFor accordingly
+        }
+      }
+      return true;
     });
     list = [...list].sort((a, b) => {
       let av: any = a[sortField as keyof Item]; let bv: any = b[sortField as keyof Item];
@@ -176,7 +187,7 @@ const Items = () => {
       return 0;
     });
     return list;
-  }, [items, search, categoryFilter, warehouseFilter, sortField, sortDir, stockMap, stockByWh]);
+  }, [items, filters, sortField, sortDir, stockMap, stockByWh]);
 
   const toggleSort = (f: SortField) => {
     if (sortField === f) setSortDir(sortDir === "asc" ? "desc" : "asc");
