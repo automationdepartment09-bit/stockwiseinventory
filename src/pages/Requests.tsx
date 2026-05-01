@@ -128,8 +128,18 @@ const Requests = () => {
   }, [searchParams, whList, setSearchParams]);
 
   const filtered = rows.filter((r) => {
-    if (tab === "pending") return r.status !== "received" && r.status !== "rejected";
-    if (tab === "mine") return r.requested_by === user?.id;
+    if (tab === "pending" && (r.status === "received" || r.status === "rejected")) return false;
+    if (tab === "mine" && r.requested_by !== user?.id) return false;
+    const it = items[r.item_id];
+    if (!matchesQuery(filters.q, [it?.name, it?.sku, r.reason, whs[r.warehouse_id]])) return false;
+    if (filters.status !== "all" && r.status !== filters.status) return false;
+    if (filters.warehouse !== "all" && r.warehouse_id !== filters.warehouse) return false;
+    if (filters.category !== "all" && it?.category_id !== filters.category) return false;
+    if (filters.project !== "all") {
+      if (filters.project === "__none__" ? r.project_id !== null : r.project_id !== filters.project) return false;
+    }
+    if (filters.requester !== "all" && r.requested_by !== filters.requester) return false;
+    if (!inDateRange(r.created_at, filters.from, filters.to)) return false;
     return true;
   });
 
