@@ -214,7 +214,18 @@ const Requests = () => {
         </TabsList>
       </Tabs>
       <Card className="glass-card">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
+          <FilterBar
+            values={filters}
+            onChange={setFilters}
+            searchPlaceholder="Search item, reason, warehouse…"
+            show={{ q: true, category: true, warehouse: true, status: true, project: true, requester: true, from: true, to: true }}
+            categories={categories.map((c) => ({ value: c.id, label: c.name }))}
+            warehouses={whList.map((w) => ({ value: w.id, label: w.name }))}
+            statuses={(Object.keys(STATUS_LABEL) as ReqStatus[]).map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+            projects={projects.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
+            requesters={Object.entries(profileMap).map(([id, p]) => ({ value: id, label: p.full_name || p.email || id.slice(0,6) }))}
+          />
           <Table>
             <TableHeader>
               <TableRow>
