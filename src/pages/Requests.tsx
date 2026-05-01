@@ -59,14 +59,16 @@ const Requests = () => {
   const { user, hasRole } = useAuth();
   const canReview = hasRole("admin", "manager");
   const [rows, setRows] = useState<Req[]>([]);
-  const [items, setItems] = useState<Record<string, { name: string; sku: string }>>({});
+  const [items, setItems] = useState<Record<string, { name: string; sku: string; category_id: string | null }>>({});
   const [whs, setWhs] = useState<Record<string, string>>({});
   const [itemList, setItemList] = useState<{ id: string; name: string; sku: string }[]>([]);
   const [whList, setWhList] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [projects, setProjects] = useState<{ id: string; name: string; code: string | null }[]>([]);
   const [projectMap, setProjectMap] = useState<Record<string, { name: string; code: string | null }>>({});
   const [profileMap, setProfileMap] = useState<Record<string, { full_name: string | null; email: string | null }>>({});
   const [tab, setTab] = useState<"pending" | "all" | "mine">("pending");
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
   const [noteFor, setNoteFor] = useState<string | null>(null);
   const [note, setNote] = useState("");
 
