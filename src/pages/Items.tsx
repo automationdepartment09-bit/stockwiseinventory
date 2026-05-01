@@ -402,7 +402,7 @@ const Items = () => {
                     <TableCell>{cat ? <Badge variant="outline">{cat.name}</Badge> : "—"}</TableCell>
                     <TableCell className="text-right">
                       <div className="font-medium">{stock}</div>
-                      {warehouseFilter !== "all" && (
+                      {filters.warehouse !== "all" && (
                         <div className="text-[10px] text-muted-foreground">overall: {overall}</div>
                       )}
                     </TableCell>
