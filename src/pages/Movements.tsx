@@ -51,14 +51,17 @@ const Movements = () => {
   const canCreate = hasRole("admin", "manager", "staff");
   const canDelete = hasRole("admin");
   const [moves, setMoves] = useState<Move[]>([]);
-  const [items, setItems] = useState<{id:string;name:string;sku:string}[]>([]);
+  const [items, setItems] = useState<{id:string;name:string;sku:string;category_id?:string|null}[]>([]);
   const [warehouses, setWarehouses] = useState<{id:string;name:string}[]>([]);
+  const [categories, setCategories] = useState<{id:string;name:string}[]>([]);
   const [reqStatusByRefId, setReqStatusByRefId] = useState<Record<string, ReqStatus>>({});
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"in"|"out"|"transfer"|"adjustment">("in");
   const [fItemId, setFItemId] = useState<string>("");
   const [fFromWh, setFFromWh] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "manual" | ReqStatus>("all");
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
+  const [typeFilter, setTypeFilter] = useState<"all"|"in"|"out"|"transfer"|"adjustment">("all");
   const [toDelete, setToDelete] = useState<Move | null>(null);
   const [deleting, setDeleting] = useState(false);
 
