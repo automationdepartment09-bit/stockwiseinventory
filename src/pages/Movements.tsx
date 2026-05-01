@@ -151,13 +151,27 @@ const Movements = () => {
   };
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return moves;
     return moves.filter((m) => {
-      const s = statusFor(m);
-      if (statusFilter === "manual") return s.kind === "manual";
-      return s.kind === "request" && s.status === statusFilter;
+      // status (request lifecycle / manual)
+      if (statusFilter !== "all") {
+        const s = statusFor(m);
+        if (statusFilter === "manual" && s.kind !== "manual") return false;
+        if (statusFilter !== "manual" && (s.kind !== "request" || s.status !== statusFilter)) return false;
+      }
+      // type
+      if (typeFilter !== "all" && m.movement_type !== typeFilter) return false;
+      // date range
+      if (!inDateRange(m.created_at, filters.from, filters.to)) return false;
+      // warehouse: from OR to
+      if (filters.warehouse !== "all" && m.from_warehouse_id !== filters.warehouse && m.to_warehouse_id !== filters.warehouse) return false;
+      // category
+      const it = itemMap.get(m.item_id);
+      if (filters.category !== "all" && (it as any)?.category_id !== filters.category) return false;
+      // search
+      if (!matchesQuery(filters.q, [it?.name, it?.sku, m.reason, m.reference])) return false;
+      return true;
     });
-  }, [moves, statusFilter, reqStatusByRefId]);
+  }, [moves, statusFilter, typeFilter, filters, reqStatusByRefId, itemMap]);
 
   return (
     <div className="space-y-4">
