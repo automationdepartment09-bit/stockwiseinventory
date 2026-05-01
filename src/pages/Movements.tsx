@@ -88,6 +88,23 @@ const Movements = () => {
   };
   useEffect(() => { load(); }, []);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const itemParam = searchParams.get("item");
+    const typeParam = searchParams.get("type");
+    if (itemParam || typeParam) {
+      if (typeParam === "in" || typeParam === "out" || typeParam === "transfer" || typeParam === "adjustment") {
+        setType(typeParam);
+      }
+      if (itemParam) setFItemId(itemParam);
+      setOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("item");
+      next.delete("type");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const create = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
