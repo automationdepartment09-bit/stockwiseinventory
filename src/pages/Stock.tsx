@@ -42,6 +42,7 @@ interface Row {
 
 const Stock = () => {
   const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
   const canEdit = hasRole("admin", "manager");
   const [rows, setRows] = useState<Row[]>([]);
   const [items, setItems] = useState<{ id: string; name: string; sku: string }[]>([]);
@@ -49,13 +50,12 @@ const Stock = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Add-stock dialog
+  // Add-stock request dialog (requires approval)
   const [addOpen, setAddOpen] = useState(false);
   const [aItem, setAItem] = useState("");
   const [aWh, setAWh] = useState("");
   const [aQty, setAQty] = useState<number>(1);
   const [aReason, setAReason] = useState("");
-  const [aRef, setARef] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Detail dialog
