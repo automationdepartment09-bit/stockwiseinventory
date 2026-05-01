@@ -18,6 +18,7 @@ import {
 import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
+import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 
 type Status = "pending" | "completed" | "cancelled";
 type Condition = "good" | "damaged" | "lost" | "partial";

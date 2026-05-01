@@ -20,6 +20,7 @@ import {
 import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
+import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 
 type Status = "pending" | "approved" | "rejected" | "cancelled";
 interface Withdrawal {
