@@ -67,26 +67,29 @@ const Stock = () => {
   const whMap = useMemo(() => new Map(whs.map((w) => [w.id, w.name])), [whs]);
 
   const load = async () => {
-    const [{ data: lvls }, { data: its }, { data: w }] = await Promise.all([
+    const [{ data: lvls }, { data: its }, { data: w }, { data: cats }] = await Promise.all([
       supabase.from("stock_levels").select("id,item_id,warehouse_id,quantity,status"),
-      supabase.from("items").select("id,name,sku").eq("is_active", true).order("name"),
+      supabase.from("items").select("id,name,sku,category_id").eq("is_active", true).order("name"),
       supabase.from("warehouses").select("id,name").eq("is_active", true).order("name"),
+      supabase.from("categories").select("id,name").order("name"),
     ]);
     setRows((lvls ?? []) as Row[]);
-    setItems(its ?? []);
+    setItems((its ?? []) as any);
     setWhs(w ?? []);
+    setCategories(cats ?? []);
   };
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       const it = itemMap.get(r.item_id);
-      const matchQ = !q || it?.name.toLowerCase().includes(q) || it?.sku.toLowerCase().includes(q);
-      const matchS = statusFilter === "all" || r.status === statusFilter;
-      return matchQ && matchS;
+      if (!matchesQuery(filters.q, [it?.name, it?.sku])) return false;
+      if (filters.status !== "all" && r.status !== filters.status) return false;
+      if (filters.warehouse !== "all" && r.warehouse_id !== filters.warehouse) return false;
+      if (filters.category !== "all" && (it as any)?.category_id !== filters.category) return false;
+      return true;
     });
-  }, [rows, itemMap, search, statusFilter]);
+  }, [rows, itemMap, filters]);
 
   const updateStatus = async (id: string, status: Status) => {
     const { error } = await supabase.from("stock_levels").update({ status }).eq("id", id);
