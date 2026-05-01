@@ -83,16 +83,17 @@ const Requests = () => {
   const [detail, setDetail] = useState<Req | null>(null);
 
   const load = async () => {
-    const [{ data: rs }, { data: its }, { data: ws }, { data: pj }, { data: pf }] = await Promise.all([
-      supabase.from("stock_requests").select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("items").select("id, name, sku").order("name"),
+    const [{ data: rs }, { data: its }, { data: ws }, { data: pj }, { data: pf }, { data: cats }] = await Promise.all([
+      supabase.from("stock_requests").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.from("items").select("id, name, sku, category_id").order("name"),
       supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
       supabase.from("projects").select("id,name,code").eq("is_active", true).order("name"),
       supabase.from("profiles").select("id,full_name,email"),
+      supabase.from("categories").select("id,name").order("name"),
     ]);
     setRows((rs ?? []) as Req[]);
-    const im: Record<string, { name: string; sku: string }> = {};
-    (its ?? []).forEach((i: any) => { im[i.id] = { name: i.name, sku: i.sku }; });
+    const im: Record<string, { name: string; sku: string; category_id: string | null }> = {};
+    (its ?? []).forEach((i: any) => { im[i.id] = { name: i.name, sku: i.sku, category_id: i.category_id ?? null }; });
     setItems(im);
     setItemList((its ?? []) as any);
     const wm: Record<string, string> = {};
@@ -100,6 +101,7 @@ const Requests = () => {
     setWhs(wm);
     setWhList((ws ?? []) as any);
     setProjects((pj ?? []) as any);
+    setCategories((cats ?? []) as any);
     const pm: Record<string, { name: string; code: string | null }> = {};
     (pj ?? []).forEach((p: any) => { pm[p.id] = { name: p.name, code: p.code }; });
     setProjectMap(pm);
