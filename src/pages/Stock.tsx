@@ -46,10 +46,10 @@ const Stock = () => {
   const navigate = useNavigate();
   const canEdit = hasRole("admin", "manager");
   const [rows, setRows] = useState<Row[]>([]);
-  const [items, setItems] = useState<{ id: string; name: string; sku: string }[]>([]);
+  const [items, setItems] = useState<{ id: string; name: string; sku: string; category_id: string | null }[]>([]);
   const [whs, setWhs] = useState<{ id: string; name: string }[]>([]);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
 
   // Add-stock request dialog (requires approval)
   const [addOpen, setAddOpen] = useState(false);
