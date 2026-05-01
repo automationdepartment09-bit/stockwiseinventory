@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Check, X, Plus, Truck, PackageCheck, PackageOpen } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
+import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 
 type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 
