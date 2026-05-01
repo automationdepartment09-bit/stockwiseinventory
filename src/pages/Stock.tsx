@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Search, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
+import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery } from "@/components/FilterBar";
 import { useNavigate } from "react-router-dom";
 
 type Status = "available" | "reserved" | "on_arrival" | "arrived" | "damaged";
@@ -45,10 +46,10 @@ const Stock = () => {
   const navigate = useNavigate();
   const canEdit = hasRole("admin", "manager");
   const [rows, setRows] = useState<Row[]>([]);
-  const [items, setItems] = useState<{ id: string; name: string; sku: string }[]>([]);
+  const [items, setItems] = useState<{ id: string; name: string; sku: string; category_id: string | null }[]>([]);
   const [whs, setWhs] = useState<{ id: string; name: string }[]>([]);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
 
   // Add-stock request dialog (requires approval)
   const [addOpen, setAddOpen] = useState(false);
@@ -66,26 +67,29 @@ const Stock = () => {
   const whMap = useMemo(() => new Map(whs.map((w) => [w.id, w.name])), [whs]);
 
   const load = async () => {
-    const [{ data: lvls }, { data: its }, { data: w }] = await Promise.all([
+    const [{ data: lvls }, { data: its }, { data: w }, { data: cats }] = await Promise.all([
       supabase.from("stock_levels").select("id,item_id,warehouse_id,quantity,status"),
-      supabase.from("items").select("id,name,sku").eq("is_active", true).order("name"),
+      supabase.from("items").select("id,name,sku,category_id").eq("is_active", true).order("name"),
       supabase.from("warehouses").select("id,name").eq("is_active", true).order("name"),
+      supabase.from("categories").select("id,name").order("name"),
     ]);
     setRows((lvls ?? []) as Row[]);
-    setItems(its ?? []);
+    setItems((its ?? []) as any);
     setWhs(w ?? []);
+    setCategories(cats ?? []);
   };
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return rows.filter((r) => {
       const it = itemMap.get(r.item_id);
-      const matchQ = !q || it?.name.toLowerCase().includes(q) || it?.sku.toLowerCase().includes(q);
-      const matchS = statusFilter === "all" || r.status === statusFilter;
-      return matchQ && matchS;
+      if (!matchesQuery(filters.q, [it?.name, it?.sku])) return false;
+      if (filters.status !== "all" && r.status !== filters.status) return false;
+      if (filters.warehouse !== "all" && r.warehouse_id !== filters.warehouse) return false;
+      if (filters.category !== "all" && (it as any)?.category_id !== filters.category) return false;
+      return true;
     });
-  }, [rows, itemMap, search, statusFilter]);
+  }, [rows, itemMap, filters]);
 
   const updateStatus = async (id: string, status: Status) => {
     const { error } = await supabase.from("stock_levels").update({ status }).eq("id", id);
@@ -169,20 +173,16 @@ const Stock = () => {
       />
       <Card className="glass-card">
         <CardContent className="p-4">
-          <div className="mb-4 flex flex-wrap gap-2">
-            <div className="relative min-w-[260px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Search item name or SKU…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
-                  <SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="mb-4">
+            <FilterBar
+              values={filters}
+              onChange={setFilters}
+              searchPlaceholder="Search item name or SKU…"
+              show={{ q: true, category: true, warehouse: true, status: true }}
+              categories={categories.map((c) => ({ value: c.id, label: c.name }))}
+              warehouses={whs.map((w) => ({ value: w.id, label: w.name }))}
+              statuses={(Object.keys(STATUS_LABEL) as Status[]).map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+            />
           </div>
 
           <Table>

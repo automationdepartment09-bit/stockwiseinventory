@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Check, X, Plus, Truck, PackageCheck, PackageOpen } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
+import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 
 type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 
@@ -58,14 +59,16 @@ const Requests = () => {
   const { user, hasRole } = useAuth();
   const canReview = hasRole("admin", "manager");
   const [rows, setRows] = useState<Req[]>([]);
-  const [items, setItems] = useState<Record<string, { name: string; sku: string }>>({});
+  const [items, setItems] = useState<Record<string, { name: string; sku: string; category_id: string | null }>>({});
   const [whs, setWhs] = useState<Record<string, string>>({});
   const [itemList, setItemList] = useState<{ id: string; name: string; sku: string }[]>([]);
   const [whList, setWhList] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [projects, setProjects] = useState<{ id: string; name: string; code: string | null }[]>([]);
   const [projectMap, setProjectMap] = useState<Record<string, { name: string; code: string | null }>>({});
   const [profileMap, setProfileMap] = useState<Record<string, { full_name: string | null; email: string | null }>>({});
   const [tab, setTab] = useState<"pending" | "all" | "mine">("pending");
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
   const [noteFor, setNoteFor] = useState<string | null>(null);
   const [note, setNote] = useState("");
 
@@ -80,16 +83,17 @@ const Requests = () => {
   const [detail, setDetail] = useState<Req | null>(null);
 
   const load = async () => {
-    const [{ data: rs }, { data: its }, { data: ws }, { data: pj }, { data: pf }] = await Promise.all([
-      supabase.from("stock_requests").select("*").order("created_at", { ascending: false }).limit(200),
-      supabase.from("items").select("id, name, sku").order("name"),
+    const [{ data: rs }, { data: its }, { data: ws }, { data: pj }, { data: pf }, { data: cats }] = await Promise.all([
+      supabase.from("stock_requests").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.from("items").select("id, name, sku, category_id").order("name"),
       supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
       supabase.from("projects").select("id,name,code").eq("is_active", true).order("name"),
       supabase.from("profiles").select("id,full_name,email"),
+      supabase.from("categories").select("id,name").order("name"),
     ]);
     setRows((rs ?? []) as Req[]);
-    const im: Record<string, { name: string; sku: string }> = {};
-    (its ?? []).forEach((i: any) => { im[i.id] = { name: i.name, sku: i.sku }; });
+    const im: Record<string, { name: string; sku: string; category_id: string | null }> = {};
+    (its ?? []).forEach((i: any) => { im[i.id] = { name: i.name, sku: i.sku, category_id: i.category_id ?? null }; });
     setItems(im);
     setItemList((its ?? []) as any);
     const wm: Record<string, string> = {};
@@ -97,6 +101,7 @@ const Requests = () => {
     setWhs(wm);
     setWhList((ws ?? []) as any);
     setProjects((pj ?? []) as any);
+    setCategories((cats ?? []) as any);
     const pm: Record<string, { name: string; code: string | null }> = {};
     (pj ?? []).forEach((p: any) => { pm[p.id] = { name: p.name, code: p.code }; });
     setProjectMap(pm);
@@ -123,8 +128,18 @@ const Requests = () => {
   }, [searchParams, whList, setSearchParams]);
 
   const filtered = rows.filter((r) => {
-    if (tab === "pending") return r.status !== "received" && r.status !== "rejected";
-    if (tab === "mine") return r.requested_by === user?.id;
+    if (tab === "pending" && (r.status === "received" || r.status === "rejected")) return false;
+    if (tab === "mine" && r.requested_by !== user?.id) return false;
+    const it = items[r.item_id];
+    if (!matchesQuery(filters.q, [it?.name, it?.sku, r.reason, whs[r.warehouse_id]])) return false;
+    if (filters.status !== "all" && r.status !== filters.status) return false;
+    if (filters.warehouse !== "all" && r.warehouse_id !== filters.warehouse) return false;
+    if (filters.category !== "all" && it?.category_id !== filters.category) return false;
+    if (filters.project !== "all") {
+      if (filters.project === "__none__" ? r.project_id !== null : r.project_id !== filters.project) return false;
+    }
+    if (filters.requester !== "all" && r.requested_by !== filters.requester) return false;
+    if (!inDateRange(r.created_at, filters.from, filters.to)) return false;
     return true;
   });
 
@@ -199,7 +214,18 @@ const Requests = () => {
         </TabsList>
       </Tabs>
       <Card className="glass-card">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
+          <FilterBar
+            values={filters}
+            onChange={setFilters}
+            searchPlaceholder="Search item, reason, warehouse…"
+            show={{ q: true, category: true, warehouse: true, status: true, project: true, requester: true, from: true, to: true }}
+            categories={categories.map((c) => ({ value: c.id, label: c.name }))}
+            warehouses={whList.map((w) => ({ value: w.id, label: w.name }))}
+            statuses={(Object.keys(STATUS_LABEL) as ReqStatus[]).map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+            projects={projects.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
+            requesters={Object.entries(profileMap).map(([id, p]) => ({ value: id, label: p.full_name || p.email || id.slice(0,6) }))}
+          />
           <Table>
             <TableHeader>
               <TableRow>

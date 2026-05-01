@@ -20,6 +20,7 @@ import {
 import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
+import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 
 type Status = "pending" | "approved" | "rejected" | "cancelled";
 interface Withdrawal {
@@ -66,8 +67,7 @@ const Withdrawals = () => {
   const [projects, setProjects] = useState<{ id: string; name: string; code: string | null }[]>([]);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
   const [view, setView] = useState<Withdrawal | null>(null);
   const [reviewing, setReviewing] = useState<Withdrawal | null>(null);
   const [reviewAction, setReviewAction] = useState<"approve" | "reject">("approve");

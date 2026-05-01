@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowDown, ArrowRightLeft, ArrowUp, Plus, Sliders, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
+import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -50,14 +51,17 @@ const Movements = () => {
   const canCreate = hasRole("admin", "manager", "staff");
   const canDelete = hasRole("admin");
   const [moves, setMoves] = useState<Move[]>([]);
-  const [items, setItems] = useState<{id:string;name:string;sku:string}[]>([]);
+  const [items, setItems] = useState<{id:string;name:string;sku:string;category_id?:string|null}[]>([]);
   const [warehouses, setWarehouses] = useState<{id:string;name:string}[]>([]);
+  const [categories, setCategories] = useState<{id:string;name:string}[]>([]);
   const [reqStatusByRefId, setReqStatusByRefId] = useState<Record<string, ReqStatus>>({});
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"in"|"out"|"transfer"|"adjustment">("in");
   const [fItemId, setFItemId] = useState<string>("");
   const [fFromWh, setFFromWh] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "manual" | ReqStatus>("all");
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
+  const [typeFilter, setTypeFilter] = useState<"all"|"in"|"out"|"transfer"|"adjustment">("all");
   const [toDelete, setToDelete] = useState<Move | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -73,15 +77,17 @@ const Movements = () => {
   };
 
   const load = async () => {
-    const [{ data: m }, { data: it }, { data: wh }, { data: rq }] = await Promise.all([
-      supabase.from("stock_movements").select("*").order("created_at", { ascending: false }).limit(100),
-      supabase.from("items").select("id, name, sku").order("name"),
+    const [{ data: m }, { data: it }, { data: wh }, { data: rq }, { data: cats }] = await Promise.all([
+      supabase.from("stock_movements").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.from("items").select("id, name, sku, category_id").order("name"),
       supabase.from("warehouses").select("id, name").order("name"),
       supabase.from("stock_requests").select("id, status"),
+      supabase.from("categories").select("id, name").order("name"),
     ]);
     setMoves((m ?? []) as Move[]);
-    setItems(it ?? []);
+    setItems((it ?? []) as any);
     setWarehouses(wh ?? []);
+    setCategories(cats ?? []);
     const map: Record<string, ReqStatus> = {};
     (rq ?? []).forEach((r: any) => { map[r.id] = r.status as ReqStatus; });
     setReqStatusByRefId(map);
@@ -145,13 +151,27 @@ const Movements = () => {
   };
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return moves;
     return moves.filter((m) => {
-      const s = statusFor(m);
-      if (statusFilter === "manual") return s.kind === "manual";
-      return s.kind === "request" && s.status === statusFilter;
+      // status (request lifecycle / manual)
+      if (statusFilter !== "all") {
+        const s = statusFor(m);
+        if (statusFilter === "manual" && s.kind !== "manual") return false;
+        if (statusFilter !== "manual" && (s.kind !== "request" || s.status !== statusFilter)) return false;
+      }
+      // type
+      if (typeFilter !== "all" && m.movement_type !== typeFilter) return false;
+      // date range
+      if (!inDateRange(m.created_at, filters.from, filters.to)) return false;
+      // warehouse: from OR to
+      if (filters.warehouse !== "all" && m.from_warehouse_id !== filters.warehouse && m.to_warehouse_id !== filters.warehouse) return false;
+      // category
+      const it = itemMap.get(m.item_id);
+      if (filters.category !== "all" && (it as any)?.category_id !== filters.category) return false;
+      // search
+      if (!matchesQuery(filters.q, [it?.name, it?.sku, m.reason, m.reference])) return false;
+      return true;
     });
-  }, [moves, statusFilter, reqStatusByRefId]);
+  }, [moves, statusFilter, typeFilter, filters, reqStatusByRefId, itemMap]);
 
   return (
     <div className="space-y-4">
@@ -213,19 +233,38 @@ const Movements = () => {
       />
       <Card className="glass-card">
         <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-end gap-2">
-            <Label className="text-xs text-muted-foreground">Status</Label>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-              <SelectTrigger className="h-8 w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTER_VALUES.map((v) => (
-                  <SelectItem key={v} value={v}>
-                    {v === "all" ? "All" : v === "manual" ? "Manual (no request)" : STATUS_LABEL[v]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FilterBar
+            values={filters}
+            onChange={setFilters}
+            searchPlaceholder="Search item, reason, reference…"
+            show={{ q: true, category: true, warehouse: true, from: true, to: true }}
+            categories={categories.map((c) => ({ value: c.id, label: c.name }))}
+            warehouses={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+            rightSlot={
+              <>
+                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
+                  <SelectTrigger className="h-9 w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="in">Stock in</SelectItem>
+                    <SelectItem value="out">Stock out</SelectItem>
+                    <SelectItem value="transfer">Transfer</SelectItem>
+                    <SelectItem value="adjustment">Adjustment</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+                  <SelectTrigger className="h-9 w-[170px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {STATUS_FILTER_VALUES.map((v) => (
+                      <SelectItem key={v} value={v}>
+                        {v === "all" ? "All req. statuses" : v === "manual" ? "Manual (no request)" : STATUS_LABEL[v]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            }
+          />
           <Table>
             <TableHeader>
               <TableRow><TableHead>When (date &amp; time)</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead>{canDelete && <TableHead className="text-right">Actions</TableHead>}</TableRow>

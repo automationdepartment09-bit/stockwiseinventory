@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus, Trash2, Pencil, ArrowLeftRight, ClipboardCheck, Undo2, History as HistoryIcon, PackageMinus } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
+import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery } from "@/components/FilterBar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -51,9 +52,7 @@ const Items = () => {
   const [stockByWh, setStockByWh] = useState<Map<string, StockRow[]>>(new Map());
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [search, setSearch] = useState(params.get("q") ?? "");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
+  const [filters, setFilters] = useState<FilterValues>({ ...EMPTY_FILTERS, q: params.get("q") ?? "" });
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
@@ -132,7 +131,7 @@ const Items = () => {
     setWarehouses((whs ?? []) as Warehouse[]);
   };
   useEffect(() => { load(); }, []);
-  useEffect(() => { setSearch(params.get("q") ?? ""); }, [params]);
+  useEffect(() => { setFilters((f) => ({ ...f, q: params.get("q") ?? "" })); }, [params]);
 
   useEffect(() => {
     const id = detail?.id;
@@ -157,16 +156,27 @@ const Items = () => {
   }, [detail?.id]);
 
   const stockFor = (itemId: string) => {
-    if (warehouseFilter === "all") return stockMap.get(itemId) ?? 0;
-    return (stockByWh.get(itemId) ?? []).find((r) => r.warehouse_id === warehouseFilter)?.quantity ?? 0;
+    if (filters.warehouse === "all") return stockMap.get(itemId) ?? 0;
+    return (stockByWh.get(itemId) ?? []).find((r) => r.warehouse_id === filters.warehouse)?.quantity ?? 0;
   };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     let list = items.filter((it) => {
-      const matchQ = !q || it.name.toLowerCase().includes(q) || it.sku.toLowerCase().includes(q);
-      const matchCat = categoryFilter === "all" || it.category_id === categoryFilter;
-      return matchQ && matchCat;
+      if (!matchesQuery(filters.q, [it.name, it.sku, it.ref_number, it.coding, (it as any).barcode])) return false;
+      if (filters.category !== "all" && it.category_id !== filters.category) return false;
+      if (filters.status === "active" && !it.is_active) return false;
+      if (filters.status === "inactive" && it.is_active) return false;
+      if (filters.status === "low") {
+        const overall = stockMap.get(it.id) ?? 0;
+        if (!(it.reorder_level > 0 && overall <= it.reorder_level)) return false;
+      }
+      if (filters.warehouse !== "all") {
+        const here = (stockByWh.get(it.id) ?? []).find((r) => r.warehouse_id === filters.warehouse)?.quantity ?? 0;
+        if (here <= 0 && filters.status !== "inactive") {
+          // show all matching items even if 0 in selected warehouse — just compute stockFor accordingly
+        }
+      }
+      return true;
     });
     list = [...list].sort((a, b) => {
       let av: any = a[sortField as keyof Item]; let bv: any = b[sortField as keyof Item];
@@ -177,7 +187,7 @@ const Items = () => {
       return 0;
     });
     return list;
-  }, [items, search, categoryFilter, warehouseFilter, sortField, sortDir, stockMap, stockByWh]);
+  }, [items, filters, sortField, sortDir, stockMap, stockByWh]);
 
   const toggleSort = (f: SortField) => {
     if (sortField === f) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -348,30 +358,23 @@ const Items = () => {
 
       <Card className="glass-card">
         <CardContent className="p-4">
-          <div className="mb-4 flex flex-wrap gap-2">
-            <div className="relative min-w-[260px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search name or SKU…"
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); if (e.target.value) setParams({ q: e.target.value }); else setParams({}); }}
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All warehouses (overall)</SelectItem>
-                {warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <div className="mb-4">
+            <FilterBar
+              values={filters}
+              onChange={(next) => {
+                setFilters(next);
+                if (next.q) setParams({ q: next.q }); else setParams({});
+              }}
+              searchPlaceholder="Search name, SKU, ref, barcode…"
+              show={{ q: true, category: true, warehouse: true, status: true }}
+              categories={categories.map((c) => ({ value: c.id, label: c.name }))}
+              warehouses={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+              statuses={[
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+                { value: "low", label: "Low stock" },
+              ]}
+            />
           </div>
 
           <Table>
@@ -399,7 +402,7 @@ const Items = () => {
                     <TableCell>{cat ? <Badge variant="outline">{cat.name}</Badge> : "—"}</TableCell>
                     <TableCell className="text-right">
                       <div className="font-medium">{stock}</div>
-                      {warehouseFilter !== "all" && (
+                      {filters.warehouse !== "all" && (
                         <div className="text-[10px] text-muted-foreground">overall: {overall}</div>
                       )}
                     </TableCell>
