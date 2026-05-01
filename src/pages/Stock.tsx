@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Search, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { ItemPicker } from "@/components/ItemPicker";
+import { useNavigate } from "react-router-dom";
 
 type Status = "available" | "reserved" | "on_arrival" | "arrived" | "damaged";
 
@@ -40,6 +42,7 @@ interface Row {
 
 const Stock = () => {
   const { user, hasRole } = useAuth();
+  const navigate = useNavigate();
   const canEdit = hasRole("admin", "manager");
   const [rows, setRows] = useState<Row[]>([]);
   const [items, setItems] = useState<{ id: string; name: string; sku: string }[]>([]);
@@ -47,13 +50,12 @@ const Stock = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Add-stock dialog
+  // Add-stock request dialog (requires approval)
   const [addOpen, setAddOpen] = useState(false);
   const [aItem, setAItem] = useState("");
   const [aWh, setAWh] = useState("");
   const [aQty, setAQty] = useState<number>(1);
   const [aReason, setAReason] = useState("");
-  const [aRef, setARef] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Detail dialog
@@ -109,21 +111,19 @@ const Stock = () => {
     e.preventDefault();
     if (!aItem || !aWh || aQty <= 0) return toast.error("Item, warehouse and quantity required");
     setSubmitting(true);
-    const { error } = await supabase.from("stock_movements").insert({
+    const { error } = await supabase.from("stock_requests").insert({
       item_id: aItem,
-      to_warehouse_id: aWh,
-      movement_type: "in",
+      warehouse_id: aWh,
       quantity: aQty,
-      reason: aReason.trim() || "Stock added",
-      reference: aRef.trim() || null,
-      created_by: user!.id,
+      reason: aReason.trim() || "Add stock",
+      requested_by: user!.id,
     });
     setSubmitting(false);
     if (error) return toast.error(error.message);
-    toast.success("Stock added");
+    toast.success("Add-stock request submitted for approval");
     setAddOpen(false);
-    setAItem(""); setAWh(""); setAQty(1); setAReason(""); setARef("");
-    load();
+    setAItem(""); setAWh(""); setAQty(1); setAReason("");
+    navigate("/requests");
   };
 
   return (
@@ -135,15 +135,11 @@ const Stock = () => {
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Add stock</Button></DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Add stock</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle>Request to add stock</DialogTitle>
+                <DialogDescription>Submitted as a stock request — requires manager approval before stock is updated.</DialogDescription>
+              </DialogHeader>
               <form onSubmit={submitAdd} className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label>Item *</Label>
-                  <Select value={aItem} onValueChange={setAItem}>
-                    <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-                    <SelectContent>{items.map((i) => (<SelectItem key={i.id} value={i.id}>{i.sku} · {i.name}</SelectItem>))}</SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-1.5">
                   <Label>Warehouse *</Label>
                   <Select value={aWh} onValueChange={setAWh}>
@@ -152,19 +148,19 @@ const Stock = () => {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
+                  <Label>Item *</Label>
+                  <ItemPicker value={aItem} onChange={setAItem} warehouseId={aWh || undefined} showWarehouseFilter={false} />
+                </div>
+                <div className="space-y-1.5">
                   <Label>Quantity *</Label>
                   <Input type="number" min={1} value={aQty} onChange={(e) => setAQty(Number(e.target.value))} required />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Reason</Label>
-                  <Input value={aReason} onChange={(e) => setAReason(e.target.value)} placeholder="e.g. Initial stock, restock" maxLength={200} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Reference</Label>
-                  <Input value={aRef} onChange={(e) => setARef(e.target.value)} placeholder="PO #, invoice, etc." maxLength={120} />
+                  <Label>Reason / Reference</Label>
+                  <Input value={aReason} onChange={(e) => setAReason(e.target.value)} placeholder="e.g. Restock, PO #, invoice" maxLength={200} />
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={submitting}>{submitting ? "Adding..." : "Add stock"}</Button>
+                  <Button type="submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit for approval"}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
