@@ -79,16 +79,16 @@ const Returns = () => {
   const isAdmin = hasRole("admin");
 
   const [rows, setRows] = useState<ReturnRow[]>([]);
-  const [items, setItems] = useState<{ id: string; name: string; sku: string }[]>([]);
+  const [items, setItems] = useState<{ id: string; name: string; sku: string; barcode: string | null; ref_number: string | null; category_id: string | null }[]>([]);
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [users, setUsers] = useState<{ id: string; full_name: string | null; email: string | null }[]>([]);
   const [projects, setProjects] = useState<{ id: string; name: string; code: string | null }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalLite[]>([]);
 
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
   const [view, setView] = useState<ReturnRow | null>(null);
   const [reviewing, setReviewing] = useState<ReturnRow | null>(null);
   const [reviewAction, setReviewAction] = useState<"complete" | "cancel">("complete");
@@ -109,22 +109,24 @@ const Returns = () => {
   const [fFile, setFFile] = useState<File | null>(null);
 
   const loadAll = async () => {
-    const [r, it, wh, pf, pj, wd] = await Promise.all([
+    const [r, it, wh, pf, pj, wd, cat] = await Promise.all([
       supabase.from("returns").select("*").order("created_at", { ascending: false }).limit(500),
-      supabase.from("items").select("id,name,sku").eq("is_active", true).order("name"),
+      supabase.from("items").select("id,name,sku,barcode,ref_number,category_id").eq("is_active", true).order("name"),
       supabase.from("warehouses").select("id,name").eq("is_active", true).order("name"),
       isAdmin
         ? supabase.from("profiles").select("id,full_name,email").order("full_name")
         : Promise.resolve({ data: [{ id: user!.id, full_name: user!.user_metadata?.full_name ?? null, email: user!.email ?? null }] } as any),
       supabase.from("projects").select("id,name,code").eq("is_active", true).order("name"),
       supabase.from("withdrawals").select("id,item_id,warehouse_id,project_id,quantity,purpose,withdrawal_date,return_expected,expected_return_date,withdrawn_by_user_id,withdrawn_by_name").eq("status", "approved").order("created_at", { ascending: false }).limit(500),
+      supabase.from("categories").select("id,name").order("name"),
     ]);
     setRows((r.data ?? []) as ReturnRow[]);
-    setItems(it.data ?? []);
+    setItems((it.data ?? []) as any);
     setWarehouses(wh.data ?? []);
     setUsers((pf.data ?? []) as any);
     setProjects((pj.data ?? []) as any);
     setWithdrawals((wd.data ?? []) as WithdrawalLite[]);
+    setCategories(cat.data ?? []);
   };
 
   useEffect(() => { loadAll(); }, []);
@@ -136,16 +138,22 @@ const Returns = () => {
   const wdMap = useMemo(() => Object.fromEntries(withdrawals.map((w) => [w.id, w])), [withdrawals]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return rows.filter((r) => {
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
-      if (!q) return true;
+      if (filters.status !== "all" && r.status !== filters.status) return false;
+      if (filters.warehouse !== "all" && r.warehouse_id !== filters.warehouse) return false;
+      if (filters.project !== "all") {
+        if (filters.project === "__none__" ? r.project_id !== null : r.project_id !== filters.project) return false;
+      }
+      if (filters.requester !== "all" && r.created_by !== filters.requester) return false;
+      if (!inDateRange(r.return_date, filters.from, filters.to)) return false;
       const item = itemMap[r.item_id];
+      if (filters.category !== "all" && item?.category_id !== filters.category) return false;
       const wh = whMap[r.warehouse_id];
       const by = r.returned_by_user_id ? (userMap[r.returned_by_user_id]?.full_name ?? userMap[r.returned_by_user_id]?.email) : r.returned_by_name;
-      return [item?.name, item?.sku, wh?.name, by, r.notes, r.condition].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+      if (!matchesQuery(filters.q, [item?.name, item?.sku, item?.barcode, item?.ref_number, wh?.name, by, r.notes, r.condition])) return false;
+      return true;
     });
-  }, [rows, statusFilter, search, itemMap, whMap, userMap]);
+  }, [rows, filters, itemMap, whMap, userMap]);
 
   const resetForm = () => {
     setFWithdrawal("__none__"); setFItem(""); setFWarehouse(""); setFProject("__none__");
@@ -368,19 +376,23 @@ const Returns = () => {
 
       <Card className="glass-card">
         <CardContent className="space-y-3 pt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Input placeholder="Search item, person, notes…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="ml-auto text-xs text-muted-foreground">{filtered.length} record(s)</span>
-          </div>
+          <FilterBar
+            values={filters}
+            onChange={setFilters}
+            searchPlaceholder="Search item, SKU, barcode, person, notes…"
+            show={{ q: true, category: true, warehouse: true, status: true, project: true, requester: isAdmin, from: true, to: true }}
+            categories={categories.map((c) => ({ value: c.id, label: c.name }))}
+            warehouses={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+            statuses={[
+              { value: "pending", label: "Pending" },
+              { value: "completed", label: "Completed" },
+              { value: "cancelled", label: "Cancelled" },
+            ]}
+            projects={projects.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
+            requesters={users.map((u) => ({ value: u.id, label: u.full_name || u.email || "User" }))}
+            rightSlot={<span className="ml-auto text-xs text-muted-foreground">{filtered.length} record(s)</span>}
+          />
+
 
           <div className="overflow-x-auto">
             <Table>
