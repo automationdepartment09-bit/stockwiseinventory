@@ -328,22 +328,28 @@ const Movements = () => {
                             : <Badge className={statusBadgeClass[s.status]}>{STATUS_LABEL[s.status]}</Badge>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{m.reason ?? ""}{m.reference ? ` (${m.reference})` : ""}</TableCell>
-                    {canDelete && (
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setToDelete(m)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => printMove(m)} title="Print receipt">
+                          <Printer className="h-3.5 w-3.5" />
                         </Button>
-                      </TableCell>
-                    )}
+                        {canDelete && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setToDelete(m)}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })}
-              {filtered.length === 0 && <TableRow><TableCell colSpan={canDelete ? 8 : 7} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
+              {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
