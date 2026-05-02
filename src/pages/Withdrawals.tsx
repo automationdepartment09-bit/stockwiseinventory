@@ -250,6 +250,35 @@ const Withdrawals = () => {
     return r.withdrawn_by_name ?? "—";
   };
 
+  const printWithdrawal = (r: Withdrawal) => {
+    const it = itemMap[r.item_id];
+    const wh = whMap[r.warehouse_id];
+    const proj = r.project_id ? projectMap[r.project_id] : null;
+    printReceipt({
+      kind: "withdrawal",
+      receiptNo: receiptNo("WTH", r.id),
+      title: r.return_expected ? "Borrow / Withdrawal slip" : "Withdrawal slip",
+      subtitle: `Status: ${r.status.toUpperCase()}`,
+      date: r.withdrawal_date,
+      fields: [
+        { label: "Warehouse", value: wh?.name },
+        { label: "Withdrawn by", value: byLabel(r) },
+        { label: "Project", value: proj ? `${proj.code ? proj.code + " · " : ""}${proj.name}` : "—" },
+        { label: "Project ref", value: r.project_reference || "—" },
+        { label: "Return expected", value: r.return_expected ? `Yes — by ${r.expected_return_date ?? "—"}` : "No" },
+        { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
+        { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Purpose", value: r.purpose, full: true },
+        { label: "Review note", value: r.review_note || "" , full: true },
+      ],
+      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity }],
+      notes: r.notes || undefined,
+      signatures: r.return_expected
+        ? ["Issued by", "Borrower", "Returned to"]
+        : ["Issued by", "Received by"],
+    });
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
