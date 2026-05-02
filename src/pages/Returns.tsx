@@ -15,10 +15,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip, Undo2 } from "lucide-react";
+import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip, Undo2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
+import { printReceipt, receiptNo } from "@/lib/receipt";
 
 type Status = "pending" | "completed" | "cancelled";
 type Condition = "good" | "damaged" | "lost" | "partial";
@@ -269,6 +270,32 @@ const Returns = () => {
     return r.returned_by_name ?? "—";
   };
 
+  const printReturn = (r: ReturnRow) => {
+    const it = itemMap[r.item_id];
+    const wh = whMap[r.warehouse_id];
+    const proj = r.project_id ? projectMap[r.project_id] : null;
+    printReceipt({
+      kind: "return",
+      receiptNo: receiptNo("RET", r.id),
+      title: "Return slip",
+      subtitle: `Status: ${r.status.toUpperCase()} · Condition: ${r.condition}`,
+      date: r.return_date,
+      fields: [
+        { label: "Warehouse", value: wh?.name },
+        { label: "Returned by", value: byLabel(r) },
+        { label: "Condition", value: r.condition },
+        { label: "Linked withdrawal", value: r.withdrawal_id ? receiptNo("WTH", r.withdrawal_id) : "—" },
+        { label: "Project", value: proj ? `${proj.code ? proj.code + " · " : ""}${proj.name}` : "—" },
+        { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
+        { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Review note", value: r.review_note || "", full: true },
+      ],
+      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity, note: r.condition }],
+      notes: r.notes || undefined,
+      signatures: ["Returned by", "Received by"],
+    });
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -435,6 +462,9 @@ const Returns = () => {
                         <div className="flex justify-end gap-1">
                           <Button size="icon" variant="ghost" onClick={() => setView(r)} title="Details">
                             <FileSearch className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" onClick={() => printReturn(r)} title="Print receipt">
+                            <Printer className="h-4 w-4" />
                           </Button>
                           {r.status === "pending" && canReview && (
                             <>

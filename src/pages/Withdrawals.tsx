@@ -17,10 +17,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip } from "lucide-react";
+import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
+import { printReceipt, receiptNo } from "@/lib/receipt";
 
 type Status = "pending" | "approved" | "rejected" | "cancelled";
 interface Withdrawal {
@@ -249,6 +250,35 @@ const Withdrawals = () => {
     return r.withdrawn_by_name ?? "—";
   };
 
+  const printWithdrawal = (r: Withdrawal) => {
+    const it = itemMap[r.item_id];
+    const wh = whMap[r.warehouse_id];
+    const proj = r.project_id ? projectMap[r.project_id] : null;
+    printReceipt({
+      kind: "withdrawal",
+      receiptNo: receiptNo("WTH", r.id),
+      title: r.return_expected ? "Borrow / Withdrawal slip" : "Withdrawal slip",
+      subtitle: `Status: ${r.status.toUpperCase()}`,
+      date: r.withdrawal_date,
+      fields: [
+        { label: "Warehouse", value: wh?.name },
+        { label: "Withdrawn by", value: byLabel(r) },
+        { label: "Project", value: proj ? `${proj.code ? proj.code + " · " : ""}${proj.name}` : "—" },
+        { label: "Project ref", value: r.project_reference || "—" },
+        { label: "Return expected", value: r.return_expected ? `Yes — by ${r.expected_return_date ?? "—"}` : "No" },
+        { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
+        { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Purpose", value: r.purpose, full: true },
+        { label: "Review note", value: r.review_note || "" , full: true },
+      ],
+      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity }],
+      notes: r.notes || undefined,
+      signatures: r.return_expected
+        ? ["Issued by", "Borrower", "Returned to"]
+        : ["Issued by", "Received by"],
+    });
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -405,6 +435,7 @@ const Withdrawals = () => {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setView(r)} title="Details"><FileSearch className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => printWithdrawal(r)} title="Print receipt"><Printer className="h-4 w-4" /></Button>
                           {canReview && r.status === "pending" && (
                             <>
                               <Button size="sm" variant="ghost" onClick={() => { setReviewing(r); setReviewAction("approve"); setReviewNote(""); }} title="Approve"><Check className="h-4 w-4 text-success" /></Button>

@@ -11,10 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowRightLeft, ArrowUp, Plus, Sliders, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowRightLeft, ArrowUp, Plus, Printer, Sliders, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
+import { printReceipt, receiptNo } from "@/lib/receipt";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -150,6 +151,39 @@ const Movements = () => {
     return { kind: "manual" };
   };
 
+  const printMove = (m: Move) => {
+    const it = itemMap.get(m.item_id);
+    const from = whMap.get(m.from_warehouse_id ?? "")?.name;
+    const to = whMap.get(m.to_warehouse_id ?? "")?.name;
+    const titleByType: Record<Move["movement_type"], string> = {
+      in: "Stock receipt voucher",
+      out: "Stock issue voucher",
+      transfer: "Stock transfer voucher",
+      adjustment: "Stock adjustment voucher",
+    };
+    const s = statusFor(m);
+    printReceipt({
+      kind: "movement",
+      receiptNo: receiptNo("MV", m.id),
+      title: titleByType[m.movement_type],
+      subtitle: `Type: ${m.movement_type.toUpperCase()}${s.kind === "request" ? " · " + STATUS_LABEL[s.status] : ""}`,
+      date: m.created_at,
+      fields: [
+        { label: "From warehouse", value: from || "—" },
+        { label: "To warehouse", value: to || "—" },
+        { label: "Reference", value: m.reference || "—" },
+        { label: "Reason", value: m.reason || "—", full: true },
+      ],
+      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: m.quantity }],
+      signatures:
+        m.movement_type === "transfer"
+          ? ["Released by", "Received by", "Verified by"]
+          : m.movement_type === "out"
+            ? ["Issued by", "Received by"]
+            : ["Received by", "Verified by"],
+    });
+  };
+
   const filtered = useMemo(() => {
     return moves.filter((m) => {
       // status (request lifecycle / manual)
@@ -267,7 +301,7 @@ const Movements = () => {
           />
           <Table>
             <TableHeader>
-              <TableRow><TableHead>When (date &amp; time)</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead>{canDelete && <TableHead className="text-right">Actions</TableHead>}</TableRow>
+              <TableRow><TableHead>When (date &amp; time)</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((m) => {
@@ -294,22 +328,28 @@ const Movements = () => {
                             : <Badge className={statusBadgeClass[s.status]}>{STATUS_LABEL[s.status]}</Badge>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{m.reason ?? ""}{m.reference ? ` (${m.reference})` : ""}</TableCell>
-                    {canDelete && (
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setToDelete(m)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => printMove(m)} title="Print receipt">
+                          <Printer className="h-3.5 w-3.5" />
                         </Button>
-                      </TableCell>
-                    )}
+                        {canDelete && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setToDelete(m)}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })}
-              {filtered.length === 0 && <TableRow><TableCell colSpan={canDelete ? 8 : 7} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
+              {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>

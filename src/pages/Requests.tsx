@@ -12,10 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Check, X, Plus, Truck, PackageCheck, PackageOpen } from "lucide-react";
+import { Check, X, Plus, Truck, PackageCheck, PackageOpen, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
+import { printReceipt, receiptNo } from "@/lib/receipt";
 
 type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 
@@ -197,6 +198,28 @@ const Requests = () => {
     return `${p.code ? p.code + " · " : ""}${p.name}`;
   };
 
+  const printRequest = (r: Req) => {
+    const it = items[r.item_id];
+    printReceipt({
+      kind: "request",
+      receiptNo: receiptNo("REQ", r.id),
+      title: r.status === "received" ? "Goods received slip" : "Stock request slip",
+      subtitle: `Status: ${STATUS_LABEL[r.status]}`,
+      date: r.created_at,
+      fields: [
+        { label: "Warehouse", value: whs[r.warehouse_id] || "—" },
+        { label: "Requested by", value: requesterLabel(r.requested_by) },
+        { label: "Project", value: projectLabel(r.project_id) },
+        { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
+        { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Reason", value: r.reason || "—", full: true },
+        { label: "Review note", value: r.review_note || "", full: true },
+      ],
+      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity }],
+      signatures: r.status === "received" ? ["Received by", "Verified by"] : ["Requested by", "Approved by"],
+    });
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -267,6 +290,10 @@ const Requests = () => {
                       <div className="tabular-nums">{d.toLocaleTimeString()}</div>
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" variant="ghost" title="Print receipt" onClick={() => printRequest(r)}>
+                          <Printer className="h-3.5 w-3.5" />
+                        </Button>
                       {canReview && r.status === "pending" && (
                         noteFor === r.id ? (
                           <div className="flex items-center justify-end gap-2">
@@ -293,6 +320,7 @@ const Requests = () => {
                           })}
                         </div>
                       )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
