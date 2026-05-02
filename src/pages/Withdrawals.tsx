@@ -435,6 +435,7 @@ const Withdrawals = () => {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setView(r)} title="Details"><FileSearch className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="ghost" onClick={() => printWithdrawal(r)} title="Print receipt"><Printer className="h-4 w-4" /></Button>
                           {canReview && r.status === "pending" && (
                             <>
                               <Button size="sm" variant="ghost" onClick={() => { setReviewing(r); setReviewAction("approve"); setReviewNote(""); }} title="Approve"><Check className="h-4 w-4 text-success" /></Button>
