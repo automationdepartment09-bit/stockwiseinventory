@@ -320,6 +320,7 @@ const Requests = () => {
                           })}
                         </div>
                       )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
