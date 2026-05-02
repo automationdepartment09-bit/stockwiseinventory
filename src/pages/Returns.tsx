@@ -270,6 +270,32 @@ const Returns = () => {
     return r.returned_by_name ?? "—";
   };
 
+  const printReturn = (r: ReturnRow) => {
+    const it = itemMap[r.item_id];
+    const wh = whMap[r.warehouse_id];
+    const proj = r.project_id ? projectMap[r.project_id] : null;
+    printReceipt({
+      kind: "return",
+      receiptNo: receiptNo("RET", r.id),
+      title: "Return slip",
+      subtitle: `Status: ${r.status.toUpperCase()} · Condition: ${r.condition}`,
+      date: r.return_date,
+      fields: [
+        { label: "Warehouse", value: wh?.name },
+        { label: "Returned by", value: byLabel(r) },
+        { label: "Condition", value: r.condition },
+        { label: "Linked withdrawal", value: r.withdrawal_id ? receiptNo("WTH", r.withdrawal_id) : "—" },
+        { label: "Project", value: proj ? `${proj.code ? proj.code + " · " : ""}${proj.name}` : "—" },
+        { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
+        { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Review note", value: r.review_note || "", full: true },
+      ],
+      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity, note: r.condition }],
+      notes: r.notes || undefined,
+      signatures: ["Returned by", "Received by"],
+    });
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
