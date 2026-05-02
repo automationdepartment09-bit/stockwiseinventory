@@ -463,6 +463,9 @@ const Returns = () => {
                           <Button size="icon" variant="ghost" onClick={() => setView(r)} title="Details">
                             <FileSearch className="h-4 w-4" />
                           </Button>
+                          <Button size="icon" variant="ghost" onClick={() => printReturn(r)} title="Print receipt">
+                            <Printer className="h-4 w-4" />
+                          </Button>
                           {r.status === "pending" && canReview && (
                             <>
                               <Button size="icon" variant="ghost" title="Complete" onClick={() => { setReviewing(r); setReviewAction("complete"); setReviewNote(""); }}>
