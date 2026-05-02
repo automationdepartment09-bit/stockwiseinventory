@@ -290,6 +290,10 @@ const Requests = () => {
                       <div className="tabular-nums">{d.toLocaleTimeString()}</div>
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" variant="ghost" title="Print receipt" onClick={() => printRequest(r)}>
+                          <Printer className="h-3.5 w-3.5" />
+                        </Button>
                       {canReview && r.status === "pending" && (
                         noteFor === r.id ? (
                           <div className="flex items-center justify-end gap-2">
