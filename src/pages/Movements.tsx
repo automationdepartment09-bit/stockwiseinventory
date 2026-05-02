@@ -151,6 +151,39 @@ const Movements = () => {
     return { kind: "manual" };
   };
 
+  const printMove = (m: Move) => {
+    const it = itemMap.get(m.item_id);
+    const from = whMap.get(m.from_warehouse_id ?? "")?.name;
+    const to = whMap.get(m.to_warehouse_id ?? "")?.name;
+    const titleByType: Record<Move["movement_type"], string> = {
+      in: "Stock receipt voucher",
+      out: "Stock issue voucher",
+      transfer: "Stock transfer voucher",
+      adjustment: "Stock adjustment voucher",
+    };
+    const s = statusFor(m);
+    printReceipt({
+      kind: "movement",
+      receiptNo: receiptNo("MV", m.id),
+      title: titleByType[m.movement_type],
+      subtitle: `Type: ${m.movement_type.toUpperCase()}${s.kind === "request" ? " · " + STATUS_LABEL[s.status] : ""}`,
+      date: m.created_at,
+      fields: [
+        { label: "From warehouse", value: from || "—" },
+        { label: "To warehouse", value: to || "—" },
+        { label: "Reference", value: m.reference || "—" },
+        { label: "Reason", value: m.reason || "—", full: true },
+      ],
+      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: m.quantity }],
+      signatures:
+        m.movement_type === "transfer"
+          ? ["Released by", "Received by", "Verified by"]
+          : m.movement_type === "out"
+            ? ["Issued by", "Received by"]
+            : ["Received by", "Verified by"],
+    });
+  };
+
   const filtered = useMemo(() => {
     return moves.filter((m) => {
       // status (request lifecycle / manual)
