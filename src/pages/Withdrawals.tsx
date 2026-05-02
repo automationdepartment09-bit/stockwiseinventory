@@ -17,10 +17,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip } from "lucide-react";
+import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
+import { printReceipt, receiptNo } from "@/lib/receipt";
 
 type Status = "pending" | "approved" | "rejected" | "cancelled";
 interface Withdrawal {
