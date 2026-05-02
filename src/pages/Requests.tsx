@@ -198,6 +198,28 @@ const Requests = () => {
     return `${p.code ? p.code + " · " : ""}${p.name}`;
   };
 
+  const printRequest = (r: Req) => {
+    const it = items[r.item_id];
+    printReceipt({
+      kind: "request",
+      receiptNo: receiptNo("REQ", r.id),
+      title: r.status === "received" ? "Goods received slip" : "Stock request slip",
+      subtitle: `Status: ${STATUS_LABEL[r.status]}`,
+      date: r.created_at,
+      fields: [
+        { label: "Warehouse", value: whs[r.warehouse_id] || "—" },
+        { label: "Requested by", value: requesterLabel(r.requested_by) },
+        { label: "Project", value: projectLabel(r.project_id) },
+        { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
+        { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Reason", value: r.reason || "—", full: true },
+        { label: "Review note", value: r.review_note || "", full: true },
+      ],
+      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity }],
+      signatures: r.status === "received" ? ["Received by", "Verified by"] : ["Requested by", "Approved by"],
+    });
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
