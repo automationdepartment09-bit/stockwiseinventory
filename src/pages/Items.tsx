@@ -196,11 +196,30 @@ const Items = () => {
   };
 
   const exportCsv = () => {
-    const headers = ["SKU", "Name", "Category", "Stock", "Unit price", "Cost price", "Reorder level"];
+    const headers = [
+      "SKU", "Name", "Category", "Status", "Ref number", "Coding", "Barcode",
+      "Source", "UOM", "Initial qty", "Unit price", "Cost price", "Reorder level",
+      "Total stock", "Total value", "Description", "Remarks", "Created", "Updated",
+      ...warehouses.map((w) => `Stock @ ${w.name}`),
+    ];
     const catName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "";
-    const rows = filtered.map((it) => [
-      it.sku, it.name, catName(it.category_id), stockMap.get(it.id) ?? 0, it.unit_price, it.cost_price, it.reorder_level,
-    ]);
+    const rows = filtered.map((it) => {
+      const total = stockMap.get(it.id) ?? 0;
+      const perWh = warehouses.map((w) =>
+        (stockByWh.get(it.id) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0
+      );
+      return [
+        it.sku, it.name, catName(it.category_id), it.is_active ? "Active" : "Inactive",
+        it.ref_number ?? "", it.coding ?? "", (it as any).barcode ?? "",
+        it.source ?? "", it.uom ?? "", it.initial_quantity ?? "",
+        it.unit_price, it.cost_price, it.reorder_level,
+        total, (Number(it.unit_price) * total).toFixed(2),
+        (it.description ?? "").replace(/\n/g, " "), (it.remarks ?? "").replace(/\n/g, " "),
+        new Date(it.created_at).toLocaleString(),
+        it.updated_at ? new Date(it.updated_at).toLocaleString() : "",
+        ...perWh,
+      ];
+    });
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
