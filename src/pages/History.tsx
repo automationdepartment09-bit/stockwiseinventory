@@ -419,6 +419,12 @@ const History = () => {
                   />
                 </>
               )}
+              <Button variant="outline" size="sm" onClick={handleExportCsv} disabled={tabExport.rows.length === 0}>
+                <Download className="mr-1 h-4 w-4" /> Export CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={handlePrintList} disabled={tabExport.rows.length === 0}>
+                <FileText className="mr-1 h-4 w-4" /> Print list
+              </Button>
               <Button variant="ghost" size="sm" onClick={reset}>Reset all</Button>
             </div>
 
