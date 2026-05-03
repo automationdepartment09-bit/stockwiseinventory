@@ -171,11 +171,11 @@ const Items = () => {
         const overall = stockMap.get(it.id) ?? 0;
         if (!(it.reorder_level > 0 && overall <= it.reorder_level)) return false;
       }
-      if (filters.warehouse !== "all") {
-        const here = (stockByWh.get(it.id) ?? []).find((r) => r.warehouse_id === filters.warehouse)?.quantity ?? 0;
-        if (here <= 0 && filters.status !== "inactive") {
-          // show all matching items even if 0 in selected warehouse — just compute stockFor accordingly
-        }
+      if (filters.status === "zero") {
+        const here = filters.warehouse !== "all"
+          ? ((stockByWh.get(it.id) ?? []).find((r) => r.warehouse_id === filters.warehouse)?.quantity ?? 0)
+          : (stockMap.get(it.id) ?? 0);
+        if (here !== 0) return false;
       }
       return true;
     });
@@ -183,6 +183,8 @@ const Items = () => {
       let av: any = a[sortField as keyof Item]; let bv: any = b[sortField as keyof Item];
       if (sortField === "stock") { av = stockFor(a.id); bv = stockFor(b.id); }
       if (typeof av === "string") { av = av.toLowerCase(); bv = (bv as string).toLowerCase(); }
+      if (av == null) av = "";
+      if (bv == null) bv = "";
       if (av < bv) return sortDir === "asc" ? -1 : 1;
       if (av > bv) return sortDir === "asc" ? 1 : -1;
       return 0;
