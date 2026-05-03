@@ -10,9 +10,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Printer, History as HistoryIcon } from "lucide-react";
+import { Printer, History as HistoryIcon, Download, FileText } from "lucide-react";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { exportCsv, printList } from "@/lib/exportPrint";
 
 type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 const REQ_LABEL: Record<ReqStatus, string> = {
