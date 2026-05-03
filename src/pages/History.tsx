@@ -273,6 +273,88 @@ const History = () => {
 
   const showQty = tab !== "items";
 
+  // ---------- Export / print-list payload for current tab ----------
+  const tabExport = useMemo(() => {
+    const fmt = (d: any) => (d ? new Date(d).toLocaleString() : "—");
+    const fmtD = (d: any) => (d ? new Date(d).toLocaleDateString() : "—");
+    if (tab === "withdrawals") {
+      return {
+        title: "Withdrawals report",
+        columns: ["Date", "Receipt", "Item", "SKU", "Warehouse", "Qty", "By", "Project", "Purpose", "Status"],
+        rows: fWithdrawals.map((r) => [
+          fmtD(r.withdrawal_date), receiptNo("WTH", r.id),
+          itemMap[r.item_id]?.name ?? "—", itemMap[r.item_id]?.sku ?? "",
+          whMap[r.warehouse_id]?.name ?? "—", r.quantity,
+          r.withdrawn_by_name || userLabel(r.withdrawn_by_user_id),
+          projLabel(r.project_id), r.purpose ?? "", r.status,
+        ]),
+      };
+    }
+    if (tab === "returns") {
+      return {
+        title: "Returns report",
+        columns: ["Date", "Receipt", "Item", "SKU", "Warehouse", "Qty", "By", "Condition", "Status"],
+        rows: fReturns.map((r) => [
+          fmtD(r.return_date), receiptNo("RET", r.id),
+          itemMap[r.item_id]?.name ?? "—", itemMap[r.item_id]?.sku ?? "",
+          whMap[r.warehouse_id]?.name ?? "—", r.quantity,
+          r.returned_by_name || userLabel(r.returned_by_user_id),
+          r.condition, r.status,
+        ]),
+      };
+    }
+    if (tab === "requests") {
+      return {
+        title: "Stock requests report",
+        columns: ["Date", "Receipt", "Item", "SKU", "Warehouse", "Qty", "Requested by", "Project", "Reason", "Status"],
+        rows: fRequests.map((r) => [
+          fmtD(r.created_at), receiptNo("REQ", r.id),
+          itemMap[r.item_id]?.name ?? "—", itemMap[r.item_id]?.sku ?? "",
+          whMap[r.warehouse_id]?.name ?? "—", r.quantity,
+          userLabel(r.requested_by), projLabel(r.project_id),
+          r.reason ?? "", REQ_LABEL[r.status as ReqStatus] ?? r.status,
+        ]),
+      };
+    }
+    if (tab === "movements") {
+      return {
+        title: "Stock movements report",
+        columns: ["When", "Receipt", "Type", "Item", "SKU", "Qty", "From", "To", "By", "Reference", "Reason"],
+        rows: fMovements.map((m) => [
+          fmt(m.created_at), receiptNo("MV", m.id), m.movement_type,
+          itemMap[m.item_id]?.name ?? "—", itemMap[m.item_id]?.sku ?? "",
+          m.quantity,
+          whMap[m.from_warehouse_id ?? ""]?.name ?? "—",
+          whMap[m.to_warehouse_id ?? ""]?.name ?? "—",
+          userLabel(m.created_by), m.reference ?? "", m.reason ?? "",
+        ]),
+      };
+    }
+    return {
+      title: "Items created report",
+      columns: ["Created", "SKU", "Name", "Category", "Reorder", "By"],
+      rows: fItems.map((it: any) => [
+        fmtD(it.created_at), it.sku, it.name,
+        categories.find((c) => c.id === it.category_id)?.name ?? "—",
+        it.reorder_level, userLabel(it.created_by),
+      ]),
+    };
+  }, [tab, fWithdrawals, fReturns, fRequests, fMovements, fItems, itemMap, whMap, categories]);
+
+  const tabFileName = () => `${tab}-history-${new Date().toISOString().slice(0, 10)}`;
+  const handleExportCsv = () => exportCsv(tabFileName(), tabExport.columns, tabExport.rows);
+  const handlePrintList = () => printList({
+    title: tabExport.title,
+    subtitle: scopeAll ? "All users" : "Only mine",
+    columns: tabExport.columns,
+    rows: tabExport.rows,
+    meta: [
+      filters.q ? { label: "Search", value: filters.q } : null,
+      filters.from ? { label: "From", value: filters.from.toLocaleDateString() } : null,
+      filters.to ? { label: "To", value: filters.to.toLocaleDateString() } : null,
+    ].filter(Boolean) as { label: string; value: string }[],
+  });
+
   return (
     <div className="space-y-4">
       <PageHeader
