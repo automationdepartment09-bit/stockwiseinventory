@@ -395,7 +395,25 @@ const Items = () => {
                 { value: "active", label: "Active" },
                 { value: "inactive", label: "Inactive" },
                 { value: "low", label: "Low stock" },
+                { value: "zero", label: "Zero stock" },
               ]}
+              rightSlot={
+                <div className="flex items-center gap-1">
+                  <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
+                    <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="sku">SKU</SelectItem>
+                      <SelectItem value="stock">Stock</SelectItem>
+                      <SelectItem value="unit_price">Price</SelectItem>
+                      <SelectItem value="created_at">Created</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="sm" className="h-9" onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")} title={sortDir === "asc" ? "Ascending" : "Descending"}>
+                    <ArrowUpDown className="mr-1 h-3.5 w-3.5" />{sortDir === "asc" ? "Asc" : "Desc"}
+                  </Button>
+                </div>
+              }
             />
           </div>
 
