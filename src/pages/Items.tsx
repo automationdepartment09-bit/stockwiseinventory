@@ -171,11 +171,11 @@ const Items = () => {
         const overall = stockMap.get(it.id) ?? 0;
         if (!(it.reorder_level > 0 && overall <= it.reorder_level)) return false;
       }
-      if (filters.warehouse !== "all") {
-        const here = (stockByWh.get(it.id) ?? []).find((r) => r.warehouse_id === filters.warehouse)?.quantity ?? 0;
-        if (here <= 0 && filters.status !== "inactive") {
-          // show all matching items even if 0 in selected warehouse — just compute stockFor accordingly
-        }
+      if (filters.status === "zero") {
+        const here = filters.warehouse !== "all"
+          ? ((stockByWh.get(it.id) ?? []).find((r) => r.warehouse_id === filters.warehouse)?.quantity ?? 0)
+          : (stockMap.get(it.id) ?? 0);
+        if (here !== 0) return false;
       }
       return true;
     });
@@ -183,6 +183,8 @@ const Items = () => {
       let av: any = a[sortField as keyof Item]; let bv: any = b[sortField as keyof Item];
       if (sortField === "stock") { av = stockFor(a.id); bv = stockFor(b.id); }
       if (typeof av === "string") { av = av.toLowerCase(); bv = (bv as string).toLowerCase(); }
+      if (av == null) av = "";
+      if (bv == null) bv = "";
       if (av < bv) return sortDir === "asc" ? -1 : 1;
       if (av > bv) return sortDir === "asc" ? 1 : -1;
       return 0;
@@ -196,11 +198,30 @@ const Items = () => {
   };
 
   const exportCsv = () => {
-    const headers = ["SKU", "Name", "Category", "Stock", "Unit price", "Cost price", "Reorder level"];
+    const headers = [
+      "SKU", "Name", "Category", "Status", "Ref number", "Coding", "Barcode",
+      "Source", "UOM", "Initial qty", "Unit price", "Cost price", "Reorder level",
+      "Total stock", "Total value", "Description", "Remarks", "Created", "Updated",
+      ...warehouses.map((w) => `Stock @ ${w.name}`),
+    ];
     const catName = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "";
-    const rows = filtered.map((it) => [
-      it.sku, it.name, catName(it.category_id), stockMap.get(it.id) ?? 0, it.unit_price, it.cost_price, it.reorder_level,
-    ]);
+    const rows = filtered.map((it) => {
+      const total = stockMap.get(it.id) ?? 0;
+      const perWh = warehouses.map((w) =>
+        (stockByWh.get(it.id) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0
+      );
+      return [
+        it.sku, it.name, catName(it.category_id), it.is_active ? "Active" : "Inactive",
+        it.ref_number ?? "", it.coding ?? "", (it as any).barcode ?? "",
+        it.source ?? "", it.uom ?? "", it.initial_quantity ?? "",
+        it.unit_price, it.cost_price, it.reorder_level,
+        total, (Number(it.unit_price) * total).toFixed(2),
+        (it.description ?? "").replace(/\n/g, " "), (it.remarks ?? "").replace(/\n/g, " "),
+        new Date(it.created_at).toLocaleString(),
+        it.updated_at ? new Date(it.updated_at).toLocaleString() : "",
+        ...perWh,
+      ];
+    });
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
@@ -374,7 +395,25 @@ const Items = () => {
                 { value: "active", label: "Active" },
                 { value: "inactive", label: "Inactive" },
                 { value: "low", label: "Low stock" },
+                { value: "zero", label: "Zero stock" },
               ]}
+              rightSlot={
+                <div className="flex items-center gap-1">
+                  <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
+                    <SelectTrigger className="h-9 w-[140px]"><SelectValue placeholder="Sort by" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="sku">SKU</SelectItem>
+                      <SelectItem value="stock">Stock</SelectItem>
+                      <SelectItem value="unit_price">Price</SelectItem>
+                      <SelectItem value="created_at">Created</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="sm" className="h-9" onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")} title={sortDir === "asc" ? "Ascending" : "Descending"}>
+                    <ArrowUpDown className="mr-1 h-3.5 w-3.5" />{sortDir === "asc" ? "Asc" : "Desc"}
+                  </Button>
+                </div>
+              }
             />
           </div>
 
