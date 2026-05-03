@@ -30,9 +30,10 @@ type SortDir = "asc" | "desc";
 interface Item {
   id: string; sku: string; name: string; description: string | null;
   category_id: string | null; unit_price: number; cost_price: number; reorder_level: number;
-  is_active: boolean; created_at: string;
+  is_active: boolean; created_at: string; updated_at?: string | null;
   ref_number: string | null; source: string | null; initial_quantity: number | null;
   uom: string | null; coding: string | null; remarks: string | null;
+  barcode?: string | null; image_url?: string | null; created_by?: string | null;
 }
 interface Category { id: string; name: string; sku_prefix: string }
 interface Warehouse { id: string; name: string }
@@ -616,19 +617,33 @@ const Items = () => {
               </TabsList>
 
               <TabsContent value="details" className="space-y-3 text-sm">
+                {detail.image_url && (
+                  <div className="flex justify-center">
+                    <img src={detail.image_url} alt={detail.name} className="max-h-48 rounded border border-border object-contain" />
+                  </div>
+                )}
+                <DRow label="SKU"><span className="font-mono text-xs">{detail.sku}</span></DRow>
+                <DRow label="Name">{detail.name}</DRow>
                 <DRow label="Category">{categories.find((c) => c.id === detail.category_id)?.name ?? "—"}</DRow>
                 <DRow label="Status">{detail.is_active ? <Badge variant="outline" className="border-primary/50 text-primary">Active</Badge> : <Badge variant="outline">Inactive</Badge>}</DRow>
-                {detail.ref_number && <DRow label="Ref number">{detail.ref_number}</DRow>}
-                {detail.coding && <DRow label="Coding">{detail.coding}</DRow>}
-                {detail.source && <DRow label="Source">{detail.source}</DRow>}
-                {detail.uom && <DRow label="UOM">{detail.uom}</DRow>}
-                {detail.initial_quantity != null && <DRow label="Initial quantity">{detail.initial_quantity}</DRow>}
+                <DRow label="Ref number">{detail.ref_number || "—"}</DRow>
+                <DRow label="Coding">{detail.coding || "—"}</DRow>
+                <DRow label="Barcode">{detail.barcode || "—"}</DRow>
+                <DRow label="Source">{detail.source || "—"}</DRow>
+                <DRow label="UOM">{detail.uom || "—"}</DRow>
+                <DRow label="Initial quantity">{detail.initial_quantity ?? "—"}</DRow>
                 <DRow label="Unit price">₱{Number(detail.unit_price).toFixed(2)}</DRow>
                 <DRow label="Cost price">₱{Number(detail.cost_price).toFixed(2)}</DRow>
+                <DRow label="Total value">₱{(Number(detail.unit_price) * (stockMap.get(detail.id) ?? 0)).toFixed(2)}</DRow>
                 <DRow label="Reorder level">{detail.reorder_level}</DRow>
-                <DRow label="Total stock">{stockMap.get(detail.id) ?? 0}</DRow>
-                {detail.description && <DRow label="Description"><span className="whitespace-pre-wrap">{detail.description}</span></DRow>}
-                {detail.remarks && <DRow label="Remarks"><span className="whitespace-pre-wrap">{detail.remarks}</span></DRow>}
+                <DRow label="Total stock">
+                  <span className="font-medium">{stockMap.get(detail.id) ?? 0}</span>
+                  {detail.reorder_level > 0 && (stockMap.get(detail.id) ?? 0) <= detail.reorder_level && (
+                    <Badge variant="destructive" className="ml-2">Low</Badge>
+                  )}
+                </DRow>
+                <DRow label="Description"><span className="whitespace-pre-wrap">{detail.description || "—"}</span></DRow>
+                <DRow label="Remarks"><span className="whitespace-pre-wrap">{detail.remarks || "—"}</span></DRow>
                 <div>
                   <div className="mb-1 text-xs text-muted-foreground">Stock per warehouse</div>
                   <div className="space-y-1">
@@ -641,7 +656,9 @@ const Items = () => {
                     ))}
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground">Created {new Date(detail.created_at).toLocaleString()}</div>
+                <DRow label="Item ID"><span className="font-mono text-[10px] break-all">{detail.id}</span></DRow>
+                <DRow label="Created">{new Date(detail.created_at).toLocaleString()}</DRow>
+                {detail.updated_at && <DRow label="Updated">{new Date(detail.updated_at).toLocaleString()}</DRow>}
               </TabsContent>
 
               <TabsContent value="actions">
