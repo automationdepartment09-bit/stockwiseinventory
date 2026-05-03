@@ -30,9 +30,10 @@ type SortDir = "asc" | "desc";
 interface Item {
   id: string; sku: string; name: string; description: string | null;
   category_id: string | null; unit_price: number; cost_price: number; reorder_level: number;
-  is_active: boolean; created_at: string;
+  is_active: boolean; created_at: string; updated_at?: string | null;
   ref_number: string | null; source: string | null; initial_quantity: number | null;
   uom: string | null; coding: string | null; remarks: string | null;
+  barcode?: string | null; image_url?: string | null; created_by?: string | null;
 }
 interface Category { id: string; name: string; sku_prefix: string }
 interface Warehouse { id: string; name: string }
