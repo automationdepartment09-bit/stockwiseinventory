@@ -158,8 +158,8 @@ const Returns = () => {
   }, [rows, filters, itemMap, whMap, userMap]);
 
   const resetForm = () => {
-    setFWithdrawal("__none__"); setFItem(""); setFWarehouse(""); setFProject("__none__");
-    setFQty(1); setFByUser("__none__"); setFByName("");
+    setFWithdrawal("__none__"); setFLines([emptyLine()]); setFWarehouse(""); setFProject("__none__");
+    setFByUser("__none__"); setFByName("");
     setFDate(new Date().toISOString().slice(0, 10));
     setFCondition("good"); setFNotes(""); setFFile(null);
   };
@@ -170,17 +170,17 @@ const Returns = () => {
     if (id === "__none__") return;
     const w = wdMap[id];
     if (!w) return;
-    setFItem(w.item_id);
+    setFLines([{ item_id: w.item_id, quantity: w.quantity }]);
     setFWarehouse(w.warehouse_id);
     setFProject(w.project_id ?? "__none__");
-    setFQty(w.quantity);
     if (w.withdrawn_by_user_id) setFByUser(w.withdrawn_by_user_id);
     else if (w.withdrawn_by_name) setFByName(w.withdrawn_by_name);
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fItem || !fWarehouse || !fQty) return toast.error("Item, warehouse and quantity are required");
+    const valid = fLines.filter((l) => l.item_id && l.quantity > 0);
+    if (!fWarehouse || valid.length === 0) return toast.error("Warehouse and at least one item are required");
     if (fByUser === "__none__" && !fByName.trim()) return toast.error("Pick a user or enter a name");
     setSubmitting(true);
 
@@ -196,12 +196,13 @@ const Returns = () => {
       attachment_name = fFile.name;
     }
 
-    const { error } = await supabase.from("returns").insert({
+    const batch_ref = valid.length > 1 ? newBatchRef("RET") : null;
+    const payload = valid.map((l) => ({
       withdrawal_id: fWithdrawal === "__none__" ? null : fWithdrawal,
-      item_id: fItem,
+      item_id: l.item_id,
       warehouse_id: fWarehouse,
       project_id: fProject === "__none__" ? null : fProject,
-      quantity: fQty,
+      quantity: l.quantity,
       returned_by_user_id: fByUser === "__none__" ? null : fByUser,
       returned_by_name: fByName.trim() || null,
       return_date: fDate,
@@ -210,10 +211,12 @@ const Returns = () => {
       attachment_url,
       attachment_name,
       created_by: user!.id,
-    });
+      batch_ref,
+    }));
+    const { error } = await supabase.from("returns").insert(payload);
     setSubmitting(false);
     if (error) return toast.error(error.message);
-    toast.success("Return logged");
+    toast.success(valid.length > 1 ? `${valid.length} returns logged (batch ${batch_ref})` : "Return logged");
     setOpen(false); resetForm(); loadAll();
   };
 
