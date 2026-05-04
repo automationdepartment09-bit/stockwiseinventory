@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 
 type Status = "pending" | "completed" | "cancelled";
 type Condition = "good" | "damaged" | "lost" | "partial";
