@@ -117,7 +117,7 @@ const Withdrawals = () => {
   useEffect(() => {
     const itemParam = searchParams.get("item");
     if (itemParam && items.some((i) => i.id === itemParam) && canCreate) {
-      setFItem(itemParam);
+      setFLines([{ item_id: itemParam, quantity: 1 }]);
       setOpen(true);
       searchParams.delete("item");
       setSearchParams(searchParams, { replace: true });
