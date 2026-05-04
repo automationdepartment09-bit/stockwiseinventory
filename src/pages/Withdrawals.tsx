@@ -256,14 +256,16 @@ const Withdrawals = () => {
   };
 
   const printWithdrawal = (r: Withdrawal) => {
-    const it = itemMap[r.item_id];
+    // Group by batch_ref for multi-item batches.
+    const siblings = r.batch_ref ? rows.filter((x) => x.batch_ref === r.batch_ref) : [r];
     const wh = whMap[r.warehouse_id];
     const proj = r.project_id ? projectMap[r.project_id] : null;
+    const totalQty = siblings.reduce((s, x) => s + x.quantity, 0);
     printReceipt({
       kind: "withdrawal",
-      receiptNo: receiptNo("WTH", r.id),
+      receiptNo: r.batch_ref ?? receiptNo("WTH", r.id),
       title: r.return_expected ? "Borrow / Withdrawal slip" : "Withdrawal slip",
-      subtitle: `Status: ${r.status.toUpperCase()}`,
+      subtitle: `Status: ${r.status.toUpperCase()}${siblings.length > 1 ? ` · ${siblings.length} items · total qty ${totalQty}` : ""}`,
       date: r.withdrawal_date,
       fields: [
         { label: "Warehouse", value: wh?.name },
@@ -273,10 +275,14 @@ const Withdrawals = () => {
         { label: "Return expected", value: r.return_expected ? `Yes — by ${r.expected_return_date ?? "—"}` : "No" },
         { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
         { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Batch", value: r.batch_ref || "—" },
         { label: "Purpose", value: r.purpose, full: true },
         { label: "Review note", value: r.review_note || "" , full: true },
       ],
-      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity }],
+      lineItems: siblings.map((x) => {
+        const it = itemMap[x.item_id];
+        return { name: it?.name ?? "Item", sku: it?.sku, qty: x.quantity, note: x.status };
+      }),
       notes: r.notes || undefined,
       signatures: r.return_expected
         ? ["Issued by", "Borrower", "Returned to"]
