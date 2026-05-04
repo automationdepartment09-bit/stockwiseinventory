@@ -78,10 +78,9 @@ const Withdrawals = () => {
   const [reviewNote, setReviewNote] = useState("");
   const [toDelete, setToDelete] = useState<Withdrawal | null>(null);
 
-  // form state
-  const [fItem, setFItem] = useState("");
+  // form state — multi-line items
+  const [fLines, setFLines] = useState<LineItem[]>([emptyLine()]);
   const [fWarehouse, setFWarehouse] = useState("");
-  const [fQty, setFQty] = useState<number>(1);
   const [fByUser, setFByUser] = useState<string>("__none__");
   const [fByName, setFByName] = useState("");
   const [fPurpose, setFPurpose] = useState("");
