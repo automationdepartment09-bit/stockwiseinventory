@@ -298,20 +298,15 @@ const Withdrawals = () => {
                 <DialogContent className="max-w-2xl">
                   <DialogHeader><DialogTitle>New withdrawal</DialogTitle></DialogHeader>
                   <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label>Item *</Label>
-                      <ItemPicker value={fItem} onChange={setFItem} warehouseId={fWarehouse || undefined} />
-                    </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 sm:col-span-2">
                       <Label>Warehouse *</Label>
                       <Select value={fWarehouse} onValueChange={setFWarehouse}>
                         <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
                         <SelectContent>{warehouses.map((w) => (<SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>))}</SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Quantity *</Label>
-                      <Input type="number" min={1} value={fQty} onChange={(e) => setFQty(Number(e.target.value))} required />
+                    <div className="sm:col-span-2">
+                      <MultiLineItems value={fLines} onChange={setFLines} warehouseId={fWarehouse || undefined} />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Date *</Label>
