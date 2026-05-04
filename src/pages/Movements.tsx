@@ -59,8 +59,11 @@ const Movements = () => {
   const [reqStatusByRefId, setReqStatusByRefId] = useState<Record<string, ReqStatus>>({});
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"in"|"out"|"transfer"|"adjustment">("in");
-  const [fItemId, setFItemId] = useState<string>("");
+  const [fLines, setFLines] = useState<LineItem[]>([emptyLine()]);
   const [fFromWh, setFFromWh] = useState<string>("");
+  const [fToWh, setFToWh] = useState<string>("");
+  const [fReason, setFReason] = useState<string>("");
+  const [fReference, setFReference] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "manual" | ReqStatus>("all");
   const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
   const [typeFilter, setTypeFilter] = useState<"all"|"in"|"out"|"transfer"|"adjustment">("all");
