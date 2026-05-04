@@ -245,6 +245,7 @@ export type Database = {
         Row: {
           attachment_name: string | null
           attachment_url: string | null
+          batch_ref: string | null
           condition: Database["public"]["Enums"]["return_condition"]
           created_at: string
           created_by: string
@@ -268,6 +269,7 @@ export type Database = {
         Insert: {
           attachment_name?: string | null
           attachment_url?: string | null
+          batch_ref?: string | null
           condition?: Database["public"]["Enums"]["return_condition"]
           created_at?: string
           created_by: string
@@ -291,6 +293,7 @@ export type Database = {
         Update: {
           attachment_name?: string | null
           attachment_url?: string | null
+          batch_ref?: string | null
           condition?: Database["public"]["Enums"]["return_condition"]
           created_at?: string
           created_by?: string
@@ -357,6 +360,7 @@ export type Database = {
       }
       stock_movements: {
         Row: {
+          batch_ref: string | null
           created_at: string
           created_by: string | null
           from_warehouse_id: string | null
@@ -369,6 +373,7 @@ export type Database = {
           to_warehouse_id: string | null
         }
         Insert: {
+          batch_ref?: string | null
           created_at?: string
           created_by?: string | null
           from_warehouse_id?: string | null
@@ -381,6 +386,7 @@ export type Database = {
           to_warehouse_id?: string | null
         }
         Update: {
+          batch_ref?: string | null
           created_at?: string
           created_by?: string | null
           from_warehouse_id?: string | null
@@ -418,6 +424,7 @@ export type Database = {
       }
       stock_requests: {
         Row: {
+          batch_ref: string | null
           created_at: string
           id: string
           item_id: string
@@ -433,6 +440,7 @@ export type Database = {
           warehouse_id: string
         }
         Insert: {
+          batch_ref?: string | null
           created_at?: string
           id?: string
           item_id: string
@@ -448,6 +456,7 @@ export type Database = {
           warehouse_id: string
         }
         Update: {
+          batch_ref?: string | null
           created_at?: string
           id?: string
           item_id?: string
@@ -630,6 +639,7 @@ export type Database = {
         Row: {
           attachment_name: string | null
           attachment_url: string | null
+          batch_ref: string | null
           created_at: string
           expected_return_date: string | null
           id: string
@@ -655,6 +665,7 @@ export type Database = {
         Insert: {
           attachment_name?: string | null
           attachment_url?: string | null
+          batch_ref?: string | null
           created_at?: string
           expected_return_date?: string | null
           id?: string
@@ -680,6 +691,7 @@ export type Database = {
         Update: {
           attachment_name?: string | null
           attachment_url?: string | null
+          batch_ref?: string | null
           created_at?: string
           expected_return_date?: string | null
           id?: string
