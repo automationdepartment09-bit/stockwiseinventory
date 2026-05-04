@@ -19,9 +19,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 
 type Status = "pending" | "approved" | "rejected" | "cancelled";
 interface Withdrawal {
