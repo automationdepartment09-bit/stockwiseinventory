@@ -157,32 +157,33 @@ const Requests = () => {
   };
 
   const openRequest = () => {
-    setReqItem(itemList[0]?.id ?? "");
+    setReqLines([emptyLine()]);
     setReqWh(whList[0]?.id ?? "");
-    setReqQty("1");
     setReqReason("");
     setReqProject("__none__");
     setOpenNew(true);
   };
 
   const submitRequest = async () => {
-    const qty = Number(reqQty);
-    if (!reqItem) return toast.error("Select an item");
+    const valid = reqLines.filter((l) => l.item_id && l.quantity > 0);
+    if (valid.length === 0) return toast.error("Add at least one item");
     if (!reqWh) return toast.error("Select a warehouse");
-    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
     if (!user?.id) return toast.error("Not signed in");
     setSubmitting(true);
-    const { error } = await supabase.from("stock_requests").insert({
-      item_id: reqItem,
+    const batch_ref = valid.length > 1 ? newBatchRef("REQ") : null;
+    const payload = valid.map((l) => ({
+      item_id: l.item_id,
       warehouse_id: reqWh,
-      quantity: qty,
+      quantity: l.quantity,
       reason: reqReason.trim() || null,
       requested_by: user.id,
       project_id: reqProject === "__none__" ? null : reqProject,
-    } as any);
+      batch_ref,
+    } as any));
+    const { error } = await supabase.from("stock_requests").insert(payload);
     setSubmitting(false);
     if (error) return toast.error(error.message);
-    toast.success("Request submitted — pending approval");
+    toast.success(valid.length > 1 ? `${valid.length} requests submitted (batch ${batch_ref})` : "Request submitted — pending approval");
     setOpenNew(false);
     load();
   };
