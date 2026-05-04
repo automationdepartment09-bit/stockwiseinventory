@@ -159,7 +159,7 @@ const Movements = () => {
   };
 
   const printMove = (m: Move) => {
-    const it = itemMap.get(m.item_id);
+    const siblings = m.batch_ref ? moves.filter((x) => x.batch_ref === m.batch_ref) : [m];
     const from = whMap.get(m.from_warehouse_id ?? "")?.name;
     const to = whMap.get(m.to_warehouse_id ?? "")?.name;
     const titleByType: Record<Move["movement_type"], string> = {
@@ -169,19 +169,24 @@ const Movements = () => {
       adjustment: "Stock adjustment voucher",
     };
     const s = statusFor(m);
+    const totalQty = siblings.reduce((sum, x) => sum + x.quantity, 0);
     printReceipt({
       kind: "movement",
-      receiptNo: receiptNo("MV", m.id),
+      receiptNo: m.batch_ref ?? receiptNo("MV", m.id),
       title: titleByType[m.movement_type],
-      subtitle: `Type: ${m.movement_type.toUpperCase()}${s.kind === "request" ? " · " + STATUS_LABEL[s.status] : ""}`,
+      subtitle: `Type: ${m.movement_type.toUpperCase()}${s.kind === "request" ? " · " + STATUS_LABEL[s.status] : ""}${siblings.length > 1 ? ` · ${siblings.length} items · total qty ${totalQty}` : ""}`,
       date: m.created_at,
       fields: [
         { label: "From warehouse", value: from || "—" },
         { label: "To warehouse", value: to || "—" },
         { label: "Reference", value: m.reference || "—" },
+        { label: "Batch", value: m.batch_ref || "—" },
         { label: "Reason", value: m.reason || "—", full: true },
       ],
-      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: m.quantity }],
+      lineItems: siblings.map((x) => {
+        const it = itemMap.get(x.item_id);
+        return { name: it?.name ?? "Item", sku: it?.sku, qty: x.quantity };
+      }),
       signatures:
         m.movement_type === "transfer"
           ? ["Released by", "Received by", "Verified by"]
