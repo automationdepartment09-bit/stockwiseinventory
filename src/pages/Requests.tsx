@@ -77,9 +77,8 @@ const Requests = () => {
 
   // New request dialog
   const [openNew, setOpenNew] = useState(false);
-  const [reqItem, setReqItem] = useState("");
+  const [reqLines, setReqLines] = useState<LineItem[]>([emptyLine()]);
   const [reqWh, setReqWh] = useState("");
-  const [reqQty, setReqQty] = useState("1");
   const [reqReason, setReqReason] = useState("");
   const [reqProject, setReqProject] = useState<string>("__none__");
   const [submitting, setSubmitting] = useState(false);
