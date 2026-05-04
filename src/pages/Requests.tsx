@@ -342,10 +342,6 @@ const Requests = () => {
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Item</Label>
-              <ItemPicker value={reqItem} onChange={setReqItem} warehouseId={reqWh || undefined} />
-            </div>
-            <div className="space-y-1.5">
               <Label>Warehouse</Label>
               <Select value={reqWh} onValueChange={setReqWh}>
                 <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
@@ -354,10 +350,7 @@ const Requests = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Quantity</Label>
-              <Input type="number" min="1" value={reqQty} onChange={(e) => setReqQty(e.target.value)} />
-            </div>
+            <MultiLineItems value={reqLines} onChange={setReqLines} warehouseId={reqWh || undefined} />
             <div className="space-y-1.5">
               <Label>Reason / source (optional)</Label>
               <Input value={reqReason} onChange={(e) => setReqReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
