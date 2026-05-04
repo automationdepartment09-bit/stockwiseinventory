@@ -118,22 +118,25 @@ const Movements = () => {
 
   const create = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const item_id = String(fd.get("item_id") ?? "");
-    const quantity = Number(fd.get("quantity") ?? 0);
-    const from_warehouse_id = String(fd.get("from_warehouse_id") ?? "") || null;
-    const to_warehouse_id = String(fd.get("to_warehouse_id") ?? "") || null;
-    const reason = String(fd.get("reason") ?? "").trim() || null;
-    const reference = String(fd.get("reference") ?? "").trim() || null;
-    if (!item_id || quantity <= 0) return toast.error("Item and positive quantity required");
+    const valid = fLines.filter((l) => l.item_id && l.quantity > 0);
+    const from_warehouse_id = fFromWh || null;
+    const to_warehouse_id = fToWh || null;
+    if (valid.length === 0) return toast.error("Add at least one item with positive quantity");
     if ((type === "in" || type === "adjustment") && !to_warehouse_id) return toast.error("Destination warehouse required");
     if (type === "out" && !from_warehouse_id) return toast.error("Source warehouse required");
     if (type === "transfer" && (!from_warehouse_id || !to_warehouse_id)) return toast.error("Both warehouses required");
-    const { error } = await supabase.from("stock_movements").insert({
-      item_id, movement_type: type, quantity, from_warehouse_id, to_warehouse_id, reason, reference, created_by: user?.id,
-    });
+    const reason = fReason.trim() || null;
+    const reference = fReference.trim() || null;
+    const batch_ref = valid.length > 1 ? newBatchRef("MV") : null;
+    const payload = valid.map((l) => ({
+      item_id: l.item_id, movement_type: type, quantity: l.quantity,
+      from_warehouse_id, to_warehouse_id, reason, reference,
+      created_by: user?.id, batch_ref,
+    }));
+    const { error } = await supabase.from("stock_movements").insert(payload);
     if (error) return toast.error(error.message);
-    toast.success("Stock updated"); setOpen(false); setFItemId(""); setFFromWh(""); load();
+    toast.success(valid.length > 1 ? `${valid.length} movements recorded (batch ${batch_ref})` : "Stock updated");
+    setOpen(false); setFLines([emptyLine()]); setFFromWh(""); setFToWh(""); setFReason(""); setFReference(""); load();
   };
 
   const itemMap = new Map(items.map(i=>[i.id,i]));
