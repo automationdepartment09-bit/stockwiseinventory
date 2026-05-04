@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 
 type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 
