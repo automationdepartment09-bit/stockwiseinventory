@@ -45,6 +45,7 @@ interface ReturnRow {
   reviewed_at: string | null;
   review_note: string | null;
   created_at: string;
+  batch_ref: string | null;
 }
 
 interface WithdrawalLite {
