@@ -148,7 +148,7 @@ const Withdrawals = () => {
   }, [rows, filters, itemMap, whMap, userMap]);
 
   const resetForm = () => {
-    setFItem(""); setFWarehouse(""); setFQty(1);
+    setFLines([emptyLine()]); setFWarehouse("");
     setFByUser("__none__"); setFByName("");
     setFPurpose(""); setFRef(""); setFProject("__none__"); setFDate(new Date().toISOString().slice(0, 10));
     setFReturn(false); setFReturnDate(""); setFNotes(""); setFFile(null);
@@ -156,7 +156,8 @@ const Withdrawals = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fItem || !fWarehouse || !fPurpose.trim()) return toast.error("Item, warehouse and purpose are required");
+    const valid = fLines.filter((l) => l.item_id && l.quantity > 0);
+    if (!fWarehouse || !fPurpose.trim() || valid.length === 0) return toast.error("Warehouse, purpose and at least one item are required");
     if (fByUser === "__none__" && !fByName.trim()) return toast.error("Pick a user or enter a name");
     if (fReturn && !fReturnDate) return toast.error("Pick the expected return date");
     setSubmitting(true);
@@ -173,10 +174,11 @@ const Withdrawals = () => {
       attachment_name = fFile.name;
     }
 
-    const { error } = await supabase.from("withdrawals").insert({
-      item_id: fItem,
+    const batch_ref = valid.length > 1 ? newBatchRef("WTH") : null;
+    const payload = valid.map((l) => ({
+      item_id: l.item_id,
       warehouse_id: fWarehouse,
-      quantity: fQty,
+      quantity: l.quantity,
       withdrawn_by_user_id: fByUser === "__none__" ? null : fByUser,
       withdrawn_by_name: fByName.trim() || null,
       purpose: fPurpose.trim(),
@@ -189,10 +191,12 @@ const Withdrawals = () => {
       attachment_url,
       attachment_name,
       requested_by: user!.id,
-    });
+      batch_ref,
+    }));
+    const { error } = await supabase.from("withdrawals").insert(payload);
     setSubmitting(false);
     if (error) return toast.error(error.message);
-    toast.success("Withdrawal submitted for approval");
+    toast.success(valid.length > 1 ? `${valid.length} withdrawals submitted (batch ${batch_ref})` : "Withdrawal submitted for approval");
     setOpen(false); resetForm(); loadAll();
   };
 
