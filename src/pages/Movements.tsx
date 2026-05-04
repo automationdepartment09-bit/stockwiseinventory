@@ -237,19 +237,10 @@ const Movements = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Item</Label>
-                  <ItemPicker value={fItemId} onChange={setFItemId} warehouseId={(type === "out" || type === "transfer") ? (fFromWh || undefined) : undefined} />
-                  <input type="hidden" name="item_id" value={fItemId} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Quantity</Label>
-                  <Input name="quantity" type="number" min="1" required />
-                </div>
                 {(type === "out" || type === "transfer") && (
                   <div className="space-y-1.5">
                     <Label>From warehouse</Label>
-                    <Select name="from_warehouse_id" value={fFromWh} onValueChange={setFFromWh}>
+                    <Select value={fFromWh} onValueChange={setFFromWh}>
                       <SelectTrigger><SelectValue placeholder="Source…" /></SelectTrigger>
                       <SelectContent>{warehouses.map(w=><SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
                     </Select>
@@ -258,14 +249,15 @@ const Movements = () => {
                 {(type === "in" || type === "transfer" || type === "adjustment") && (
                   <div className="space-y-1.5">
                     <Label>To warehouse</Label>
-                    <Select name="to_warehouse_id">
+                    <Select value={fToWh} onValueChange={setFToWh}>
                       <SelectTrigger><SelectValue placeholder="Destination…" /></SelectTrigger>
                       <SelectContent>{warehouses.map(w=><SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
-                <div className="space-y-1.5"><Label>Reason</Label><Input name="reason" maxLength={200} /></div>
-                <div className="space-y-1.5"><Label>Reference</Label><Input name="reference" maxLength={100} placeholder="PO, invoice…" /></div>
+                <MultiLineItems value={fLines} onChange={setFLines} warehouseId={(type === "out" || type === "transfer") ? (fFromWh || undefined) : undefined} />
+                <div className="space-y-1.5"><Label>Reason</Label><Input value={fReason} onChange={(e)=>setFReason(e.target.value)} maxLength={200} /></div>
+                <div className="space-y-1.5"><Label>Reference</Label><Input value={fReference} onChange={(e)=>setFReference(e.target.value)} maxLength={100} placeholder="PO, invoice…" /></div>
                 <DialogFooter><Button type="submit">Save</Button></DialogFooter>
               </form>
             </DialogContent>
