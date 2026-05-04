@@ -275,14 +275,15 @@ const Returns = () => {
   };
 
   const printReturn = (r: ReturnRow) => {
-    const it = itemMap[r.item_id];
+    const siblings = r.batch_ref ? rows.filter((x) => x.batch_ref === r.batch_ref) : [r];
     const wh = whMap[r.warehouse_id];
     const proj = r.project_id ? projectMap[r.project_id] : null;
+    const totalQty = siblings.reduce((s, x) => s + x.quantity, 0);
     printReceipt({
       kind: "return",
-      receiptNo: receiptNo("RET", r.id),
+      receiptNo: r.batch_ref ?? receiptNo("RET", r.id),
       title: "Return slip",
-      subtitle: `Status: ${r.status.toUpperCase()} · Condition: ${r.condition}`,
+      subtitle: `Status: ${r.status.toUpperCase()} · Condition: ${r.condition}${siblings.length > 1 ? ` · ${siblings.length} items · total qty ${totalQty}` : ""}`,
       date: r.return_date,
       fields: [
         { label: "Warehouse", value: wh?.name },
@@ -292,9 +293,13 @@ const Returns = () => {
         { label: "Project", value: proj ? `${proj.code ? proj.code + " · " : ""}${proj.name}` : "—" },
         { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
         { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Batch", value: r.batch_ref || "—" },
         { label: "Review note", value: r.review_note || "", full: true },
       ],
-      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity, note: r.condition }],
+      lineItems: siblings.map((x) => {
+        const it = itemMap[x.item_id];
+        return { name: it?.name ?? "Item", sku: it?.sku, qty: x.quantity, note: x.condition };
+      }),
       notes: r.notes || undefined,
       signatures: ["Returned by", "Received by"],
     });
