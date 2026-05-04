@@ -117,9 +117,8 @@ const Requests = () => {
   useEffect(() => {
     const itemParam = searchParams.get("item");
     if (itemParam) {
-      setReqItem(itemParam);
+      setReqLines([{ item_id: itemParam, quantity: 1 }]);
       setReqWh(whList[0]?.id ?? "");
-      setReqQty("1");
       setReqReason("");
       setReqProject("__none__");
       setOpenNew(true);
