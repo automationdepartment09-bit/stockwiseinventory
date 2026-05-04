@@ -200,12 +200,13 @@ const Requests = () => {
   };
 
   const printRequest = (r: Req) => {
-    const it = items[r.item_id];
+    const siblings = r.batch_ref ? rows.filter((x) => x.batch_ref === r.batch_ref) : [r];
+    const totalQty = siblings.reduce((s, x) => s + x.quantity, 0);
     printReceipt({
       kind: "request",
-      receiptNo: receiptNo("REQ", r.id),
+      receiptNo: r.batch_ref ?? receiptNo("REQ", r.id),
       title: r.status === "received" ? "Goods received slip" : "Stock request slip",
-      subtitle: `Status: ${STATUS_LABEL[r.status]}`,
+      subtitle: `Status: ${STATUS_LABEL[r.status]}${siblings.length > 1 ? ` · ${siblings.length} items · total qty ${totalQty}` : ""}`,
       date: r.created_at,
       fields: [
         { label: "Warehouse", value: whs[r.warehouse_id] || "—" },
@@ -213,10 +214,14 @@ const Requests = () => {
         { label: "Project", value: projectLabel(r.project_id) },
         { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
         { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Batch", value: r.batch_ref || "—" },
         { label: "Reason", value: r.reason || "—", full: true },
         { label: "Review note", value: r.review_note || "", full: true },
       ],
-      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity }],
+      lineItems: siblings.map((x) => {
+        const it = items[x.item_id];
+        return { name: it?.name ?? "Item", sku: it?.sku, qty: x.quantity, note: STATUS_LABEL[x.status] };
+      }),
       signatures: r.status === "received" ? ["Received by", "Verified by"] : ["Requested by", "Approved by"],
     });
   };
