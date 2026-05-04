@@ -107,7 +107,7 @@ const Movements = () => {
       if (typeParam === "in" || typeParam === "out" || typeParam === "transfer" || typeParam === "adjustment") {
         setType(typeParam);
       }
-      if (itemParam) setFItemId(itemParam);
+      if (itemParam) setFLines([{ item_id: itemParam, quantity: 1 }]);
       setOpen(true);
       const next = new URLSearchParams(searchParams);
       next.delete("item");
