@@ -100,10 +100,9 @@ const Returns = () => {
 
   // form state
   const [fWithdrawal, setFWithdrawal] = useState<string>("__none__");
-  const [fItem, setFItem] = useState("");
+  const [fLines, setFLines] = useState<LineItem[]>([emptyLine()]);
   const [fWarehouse, setFWarehouse] = useState("");
   const [fProject, setFProject] = useState<string>("__none__");
-  const [fQty, setFQty] = useState<number>(1);
   const [fByUser, setFByUser] = useState<string>("__none__");
   const [fByName, setFByName] = useState("");
   const [fDate, setFDate] = useState(new Date().toISOString().slice(0, 10));
