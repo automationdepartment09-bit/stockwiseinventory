@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 
 type Status = "pending" | "completed" | "cancelled";
 type Condition = "good" | "damaged" | "lost" | "partial";
@@ -44,6 +45,7 @@ interface ReturnRow {
   reviewed_at: string | null;
   review_note: string | null;
   created_at: string;
+  batch_ref: string | null;
 }
 
 interface WithdrawalLite {
@@ -98,10 +100,9 @@ const Returns = () => {
 
   // form state
   const [fWithdrawal, setFWithdrawal] = useState<string>("__none__");
-  const [fItem, setFItem] = useState("");
+  const [fLines, setFLines] = useState<LineItem[]>([emptyLine()]);
   const [fWarehouse, setFWarehouse] = useState("");
   const [fProject, setFProject] = useState<string>("__none__");
-  const [fQty, setFQty] = useState<number>(1);
   const [fByUser, setFByUser] = useState<string>("__none__");
   const [fByName, setFByName] = useState("");
   const [fDate, setFDate] = useState(new Date().toISOString().slice(0, 10));
@@ -157,8 +158,8 @@ const Returns = () => {
   }, [rows, filters, itemMap, whMap, userMap]);
 
   const resetForm = () => {
-    setFWithdrawal("__none__"); setFItem(""); setFWarehouse(""); setFProject("__none__");
-    setFQty(1); setFByUser("__none__"); setFByName("");
+    setFWithdrawal("__none__"); setFLines([emptyLine()]); setFWarehouse(""); setFProject("__none__");
+    setFByUser("__none__"); setFByName("");
     setFDate(new Date().toISOString().slice(0, 10));
     setFCondition("good"); setFNotes(""); setFFile(null);
   };
@@ -169,17 +170,17 @@ const Returns = () => {
     if (id === "__none__") return;
     const w = wdMap[id];
     if (!w) return;
-    setFItem(w.item_id);
+    setFLines([{ item_id: w.item_id, quantity: w.quantity }]);
     setFWarehouse(w.warehouse_id);
     setFProject(w.project_id ?? "__none__");
-    setFQty(w.quantity);
     if (w.withdrawn_by_user_id) setFByUser(w.withdrawn_by_user_id);
     else if (w.withdrawn_by_name) setFByName(w.withdrawn_by_name);
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fItem || !fWarehouse || !fQty) return toast.error("Item, warehouse and quantity are required");
+    const valid = fLines.filter((l) => l.item_id && l.quantity > 0);
+    if (!fWarehouse || valid.length === 0) return toast.error("Warehouse and at least one item are required");
     if (fByUser === "__none__" && !fByName.trim()) return toast.error("Pick a user or enter a name");
     setSubmitting(true);
 
@@ -195,12 +196,13 @@ const Returns = () => {
       attachment_name = fFile.name;
     }
 
-    const { error } = await supabase.from("returns").insert({
+    const batch_ref = valid.length > 1 ? newBatchRef("RET") : null;
+    const payload = valid.map((l) => ({
       withdrawal_id: fWithdrawal === "__none__" ? null : fWithdrawal,
-      item_id: fItem,
+      item_id: l.item_id,
       warehouse_id: fWarehouse,
       project_id: fProject === "__none__" ? null : fProject,
-      quantity: fQty,
+      quantity: l.quantity,
       returned_by_user_id: fByUser === "__none__" ? null : fByUser,
       returned_by_name: fByName.trim() || null,
       return_date: fDate,
@@ -209,10 +211,12 @@ const Returns = () => {
       attachment_url,
       attachment_name,
       created_by: user!.id,
-    });
+      batch_ref,
+    }));
+    const { error } = await supabase.from("returns").insert(payload);
     setSubmitting(false);
     if (error) return toast.error(error.message);
-    toast.success("Return logged");
+    toast.success(valid.length > 1 ? `${valid.length} returns logged (batch ${batch_ref})` : "Return logged");
     setOpen(false); resetForm(); loadAll();
   };
 
@@ -271,14 +275,15 @@ const Returns = () => {
   };
 
   const printReturn = (r: ReturnRow) => {
-    const it = itemMap[r.item_id];
+    const siblings = r.batch_ref ? rows.filter((x) => x.batch_ref === r.batch_ref) : [r];
     const wh = whMap[r.warehouse_id];
     const proj = r.project_id ? projectMap[r.project_id] : null;
+    const totalQty = siblings.reduce((s, x) => s + x.quantity, 0);
     printReceipt({
       kind: "return",
-      receiptNo: receiptNo("RET", r.id),
+      receiptNo: r.batch_ref ?? receiptNo("RET", r.id),
       title: "Return slip",
-      subtitle: `Status: ${r.status.toUpperCase()} · Condition: ${r.condition}`,
+      subtitle: `Status: ${r.status.toUpperCase()} · Condition: ${r.condition}${siblings.length > 1 ? ` · ${siblings.length} items · total qty ${totalQty}` : ""}`,
       date: r.return_date,
       fields: [
         { label: "Warehouse", value: wh?.name },
@@ -288,9 +293,13 @@ const Returns = () => {
         { label: "Project", value: proj ? `${proj.code ? proj.code + " · " : ""}${proj.name}` : "—" },
         { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
         { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Batch", value: r.batch_ref || "—" },
         { label: "Review note", value: r.review_note || "", full: true },
       ],
-      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity, note: r.condition }],
+      lineItems: siblings.map((x) => {
+        const it = itemMap[x.item_id];
+        return { name: it?.name ?? "Item", sku: it?.sku, qty: x.quantity, note: x.condition };
+      }),
       notes: r.notes || undefined,
       signatures: ["Returned by", "Received by"],
     });
@@ -327,20 +336,15 @@ const Returns = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Item *</Label>
-                      <ItemPicker value={fItem} onChange={setFItem} warehouseId={fWarehouse || undefined} />
-                    </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1.5 sm:col-span-2">
                       <Label>Warehouse *</Label>
                       <Select value={fWarehouse} onValueChange={setFWarehouse}>
                         <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
                         <SelectContent>{warehouses.map((w) => (<SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>))}</SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Quantity *</Label>
-                      <Input type="number" min={1} value={fQty} onChange={(e) => setFQty(Number(e.target.value))} required />
+                    <div className="sm:col-span-2">
+                      <MultiLineItems value={fLines} onChange={setFLines} warehouseId={fWarehouse || undefined} />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Return date *</Label>

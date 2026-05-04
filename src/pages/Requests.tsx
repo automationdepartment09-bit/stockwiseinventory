@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 
 type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 
@@ -26,6 +27,7 @@ interface Req {
   requested_by: string; reviewed_by: string | null; review_note: string | null;
   reviewed_at: string | null; created_at: string;
   project_id: string | null;
+  batch_ref: string | null;
 }
 
 const STATUS_LABEL: Record<ReqStatus, string> = {
@@ -75,9 +77,8 @@ const Requests = () => {
 
   // New request dialog
   const [openNew, setOpenNew] = useState(false);
-  const [reqItem, setReqItem] = useState("");
+  const [reqLines, setReqLines] = useState<LineItem[]>([emptyLine()]);
   const [reqWh, setReqWh] = useState("");
-  const [reqQty, setReqQty] = useState("1");
   const [reqReason, setReqReason] = useState("");
   const [reqProject, setReqProject] = useState<string>("__none__");
   const [submitting, setSubmitting] = useState(false);
@@ -116,9 +117,8 @@ const Requests = () => {
   useEffect(() => {
     const itemParam = searchParams.get("item");
     if (itemParam) {
-      setReqItem(itemParam);
+      setReqLines([{ item_id: itemParam, quantity: 1 }]);
       setReqWh(whList[0]?.id ?? "");
-      setReqQty("1");
       setReqReason("");
       setReqProject("__none__");
       setOpenNew(true);
@@ -157,32 +157,33 @@ const Requests = () => {
   };
 
   const openRequest = () => {
-    setReqItem(itemList[0]?.id ?? "");
+    setReqLines([emptyLine()]);
     setReqWh(whList[0]?.id ?? "");
-    setReqQty("1");
     setReqReason("");
     setReqProject("__none__");
     setOpenNew(true);
   };
 
   const submitRequest = async () => {
-    const qty = Number(reqQty);
-    if (!reqItem) return toast.error("Select an item");
+    const valid = reqLines.filter((l) => l.item_id && l.quantity > 0);
+    if (valid.length === 0) return toast.error("Add at least one item");
     if (!reqWh) return toast.error("Select a warehouse");
-    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
     if (!user?.id) return toast.error("Not signed in");
     setSubmitting(true);
-    const { error } = await supabase.from("stock_requests").insert({
-      item_id: reqItem,
+    const batch_ref = valid.length > 1 ? newBatchRef("REQ") : null;
+    const payload = valid.map((l) => ({
+      item_id: l.item_id,
       warehouse_id: reqWh,
-      quantity: qty,
+      quantity: l.quantity,
       reason: reqReason.trim() || null,
       requested_by: user.id,
       project_id: reqProject === "__none__" ? null : reqProject,
-    } as any);
+      batch_ref,
+    } as any));
+    const { error } = await supabase.from("stock_requests").insert(payload);
     setSubmitting(false);
     if (error) return toast.error(error.message);
-    toast.success("Request submitted — pending approval");
+    toast.success(valid.length > 1 ? `${valid.length} requests submitted (batch ${batch_ref})` : "Request submitted — pending approval");
     setOpenNew(false);
     load();
   };
@@ -199,12 +200,13 @@ const Requests = () => {
   };
 
   const printRequest = (r: Req) => {
-    const it = items[r.item_id];
+    const siblings = r.batch_ref ? rows.filter((x) => x.batch_ref === r.batch_ref) : [r];
+    const totalQty = siblings.reduce((s, x) => s + x.quantity, 0);
     printReceipt({
       kind: "request",
-      receiptNo: receiptNo("REQ", r.id),
+      receiptNo: r.batch_ref ?? receiptNo("REQ", r.id),
       title: r.status === "received" ? "Goods received slip" : "Stock request slip",
-      subtitle: `Status: ${STATUS_LABEL[r.status]}`,
+      subtitle: `Status: ${STATUS_LABEL[r.status]}${siblings.length > 1 ? ` · ${siblings.length} items · total qty ${totalQty}` : ""}`,
       date: r.created_at,
       fields: [
         { label: "Warehouse", value: whs[r.warehouse_id] || "—" },
@@ -212,10 +214,14 @@ const Requests = () => {
         { label: "Project", value: projectLabel(r.project_id) },
         { label: "Submitted", value: new Date(r.created_at).toLocaleString() },
         { label: "Reviewed", value: r.reviewed_at ? new Date(r.reviewed_at).toLocaleString() : "—" },
+        { label: "Batch", value: r.batch_ref || "—" },
         { label: "Reason", value: r.reason || "—", full: true },
         { label: "Review note", value: r.review_note || "", full: true },
       ],
-      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: r.quantity }],
+      lineItems: siblings.map((x) => {
+        const it = items[x.item_id];
+        return { name: it?.name ?? "Item", sku: it?.sku, qty: x.quantity, note: STATUS_LABEL[x.status] };
+      }),
       signatures: r.status === "received" ? ["Received by", "Verified by"] : ["Requested by", "Approved by"],
     });
   };
@@ -341,10 +347,6 @@ const Requests = () => {
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Item</Label>
-              <ItemPicker value={reqItem} onChange={setReqItem} warehouseId={reqWh || undefined} />
-            </div>
-            <div className="space-y-1.5">
               <Label>Warehouse</Label>
               <Select value={reqWh} onValueChange={setReqWh}>
                 <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
@@ -353,10 +355,7 @@ const Requests = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label>Quantity</Label>
-              <Input type="number" min="1" value={reqQty} onChange={(e) => setReqQty(e.target.value)} />
-            </div>
+            <MultiLineItems value={reqLines} onChange={setReqLines} warehouseId={reqWh || undefined} />
             <div className="space-y-1.5">
               <Label>Reason / source (optional)</Label>
               <Input value={reqReason} onChange={(e) => setReqReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />

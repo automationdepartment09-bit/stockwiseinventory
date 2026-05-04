@@ -16,12 +16,13 @@ import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface Move { id: string; movement_type: "in"|"out"|"transfer"|"adjustment"; quantity: number; reason: string|null; reference: string|null; created_at: string; item_id: string; from_warehouse_id: string|null; to_warehouse_id: string|null }
+interface Move { id: string; movement_type: "in"|"out"|"transfer"|"adjustment"; quantity: number; reason: string|null; reference: string|null; created_at: string; item_id: string; from_warehouse_id: string|null; to_warehouse_id: string|null; batch_ref: string|null }
 
 type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 
@@ -58,8 +59,11 @@ const Movements = () => {
   const [reqStatusByRefId, setReqStatusByRefId] = useState<Record<string, ReqStatus>>({});
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<"in"|"out"|"transfer"|"adjustment">("in");
-  const [fItemId, setFItemId] = useState<string>("");
+  const [fLines, setFLines] = useState<LineItem[]>([emptyLine()]);
   const [fFromWh, setFFromWh] = useState<string>("");
+  const [fToWh, setFToWh] = useState<string>("");
+  const [fReason, setFReason] = useState<string>("");
+  const [fReference, setFReference] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<"all" | "manual" | ReqStatus>("all");
   const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
   const [typeFilter, setTypeFilter] = useState<"all"|"in"|"out"|"transfer"|"adjustment">("all");
@@ -103,7 +107,7 @@ const Movements = () => {
       if (typeParam === "in" || typeParam === "out" || typeParam === "transfer" || typeParam === "adjustment") {
         setType(typeParam);
       }
-      if (itemParam) setFItemId(itemParam);
+      if (itemParam) setFLines([{ item_id: itemParam, quantity: 1 }]);
       setOpen(true);
       const next = new URLSearchParams(searchParams);
       next.delete("item");
@@ -114,22 +118,25 @@ const Movements = () => {
 
   const create = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const item_id = String(fd.get("item_id") ?? "");
-    const quantity = Number(fd.get("quantity") ?? 0);
-    const from_warehouse_id = String(fd.get("from_warehouse_id") ?? "") || null;
-    const to_warehouse_id = String(fd.get("to_warehouse_id") ?? "") || null;
-    const reason = String(fd.get("reason") ?? "").trim() || null;
-    const reference = String(fd.get("reference") ?? "").trim() || null;
-    if (!item_id || quantity <= 0) return toast.error("Item and positive quantity required");
+    const valid = fLines.filter((l) => l.item_id && l.quantity > 0);
+    const from_warehouse_id = fFromWh || null;
+    const to_warehouse_id = fToWh || null;
+    if (valid.length === 0) return toast.error("Add at least one item with positive quantity");
     if ((type === "in" || type === "adjustment") && !to_warehouse_id) return toast.error("Destination warehouse required");
     if (type === "out" && !from_warehouse_id) return toast.error("Source warehouse required");
     if (type === "transfer" && (!from_warehouse_id || !to_warehouse_id)) return toast.error("Both warehouses required");
-    const { error } = await supabase.from("stock_movements").insert({
-      item_id, movement_type: type, quantity, from_warehouse_id, to_warehouse_id, reason, reference, created_by: user?.id,
-    });
+    const reason = fReason.trim() || null;
+    const reference = fReference.trim() || null;
+    const batch_ref = valid.length > 1 ? newBatchRef("MV") : null;
+    const payload = valid.map((l) => ({
+      item_id: l.item_id, movement_type: type, quantity: l.quantity,
+      from_warehouse_id, to_warehouse_id, reason, reference,
+      created_by: user?.id, batch_ref,
+    }));
+    const { error } = await supabase.from("stock_movements").insert(payload);
     if (error) return toast.error(error.message);
-    toast.success("Stock updated"); setOpen(false); setFItemId(""); setFFromWh(""); load();
+    toast.success(valid.length > 1 ? `${valid.length} movements recorded (batch ${batch_ref})` : "Stock updated");
+    setOpen(false); setFLines([emptyLine()]); setFFromWh(""); setFToWh(""); setFReason(""); setFReference(""); load();
   };
 
   const itemMap = new Map(items.map(i=>[i.id,i]));
@@ -152,7 +159,7 @@ const Movements = () => {
   };
 
   const printMove = (m: Move) => {
-    const it = itemMap.get(m.item_id);
+    const siblings = m.batch_ref ? moves.filter((x) => x.batch_ref === m.batch_ref) : [m];
     const from = whMap.get(m.from_warehouse_id ?? "")?.name;
     const to = whMap.get(m.to_warehouse_id ?? "")?.name;
     const titleByType: Record<Move["movement_type"], string> = {
@@ -162,19 +169,24 @@ const Movements = () => {
       adjustment: "Stock adjustment voucher",
     };
     const s = statusFor(m);
+    const totalQty = siblings.reduce((sum, x) => sum + x.quantity, 0);
     printReceipt({
       kind: "movement",
-      receiptNo: receiptNo("MV", m.id),
+      receiptNo: m.batch_ref ?? receiptNo("MV", m.id),
       title: titleByType[m.movement_type],
-      subtitle: `Type: ${m.movement_type.toUpperCase()}${s.kind === "request" ? " · " + STATUS_LABEL[s.status] : ""}`,
+      subtitle: `Type: ${m.movement_type.toUpperCase()}${s.kind === "request" ? " · " + STATUS_LABEL[s.status] : ""}${siblings.length > 1 ? ` · ${siblings.length} items · total qty ${totalQty}` : ""}`,
       date: m.created_at,
       fields: [
         { label: "From warehouse", value: from || "—" },
         { label: "To warehouse", value: to || "—" },
         { label: "Reference", value: m.reference || "—" },
+        { label: "Batch", value: m.batch_ref || "—" },
         { label: "Reason", value: m.reason || "—", full: true },
       ],
-      lineItems: [{ name: it?.name ?? "Item", sku: it?.sku, qty: m.quantity }],
+      lineItems: siblings.map((x) => {
+        const it = itemMap.get(x.item_id);
+        return { name: it?.name ?? "Item", sku: it?.sku, qty: x.quantity };
+      }),
       signatures:
         m.movement_type === "transfer"
           ? ["Released by", "Received by", "Verified by"]
@@ -230,19 +242,10 @@ const Movements = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Item</Label>
-                  <ItemPicker value={fItemId} onChange={setFItemId} warehouseId={(type === "out" || type === "transfer") ? (fFromWh || undefined) : undefined} />
-                  <input type="hidden" name="item_id" value={fItemId} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Quantity</Label>
-                  <Input name="quantity" type="number" min="1" required />
-                </div>
                 {(type === "out" || type === "transfer") && (
                   <div className="space-y-1.5">
                     <Label>From warehouse</Label>
-                    <Select name="from_warehouse_id" value={fFromWh} onValueChange={setFFromWh}>
+                    <Select value={fFromWh} onValueChange={setFFromWh}>
                       <SelectTrigger><SelectValue placeholder="Source…" /></SelectTrigger>
                       <SelectContent>{warehouses.map(w=><SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
                     </Select>
@@ -251,14 +254,15 @@ const Movements = () => {
                 {(type === "in" || type === "transfer" || type === "adjustment") && (
                   <div className="space-y-1.5">
                     <Label>To warehouse</Label>
-                    <Select name="to_warehouse_id">
+                    <Select value={fToWh} onValueChange={setFToWh}>
                       <SelectTrigger><SelectValue placeholder="Destination…" /></SelectTrigger>
                       <SelectContent>{warehouses.map(w=><SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
-                <div className="space-y-1.5"><Label>Reason</Label><Input name="reason" maxLength={200} /></div>
-                <div className="space-y-1.5"><Label>Reference</Label><Input name="reference" maxLength={100} placeholder="PO, invoice…" /></div>
+                <MultiLineItems value={fLines} onChange={setFLines} warehouseId={(type === "out" || type === "transfer") ? (fFromWh || undefined) : undefined} />
+                <div className="space-y-1.5"><Label>Reason</Label><Input value={fReason} onChange={(e)=>setFReason(e.target.value)} maxLength={200} /></div>
+                <div className="space-y-1.5"><Label>Reference</Label><Input value={fReference} onChange={(e)=>setFReference(e.target.value)} maxLength={100} placeholder="PO, invoice…" /></div>
                 <DialogFooter><Button type="submit">Save</Button></DialogFooter>
               </form>
             </DialogContent>
