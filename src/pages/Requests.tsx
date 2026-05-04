@@ -27,6 +27,7 @@ interface Req {
   requested_by: string; reviewed_by: string | null; review_note: string | null;
   reviewed_at: string | null; created_at: string;
   project_id: string | null;
+  batch_ref: string | null;
 }
 
 const STATUS_LABEL: Record<ReqStatus, string> = {
