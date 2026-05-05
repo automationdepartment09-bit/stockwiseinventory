@@ -148,6 +148,27 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          prefs: Json
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          prefs?: Json
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          prefs?: Json
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
