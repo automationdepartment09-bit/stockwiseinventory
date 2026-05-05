@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus, Trash2, Pencil, ArrowLeftRight, ClipboardCheck, Undo2, History as HistoryIcon, PackageMinus } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
+import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery } from "@/components/FilterBar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
@@ -59,9 +60,8 @@ const Items = () => {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [addItemId, setAddItemId] = useState<string>("");
+  const [addLines, setAddLines] = useState<LineItem[]>([emptyLine()]);
   const [addWh, setAddWh] = useState<string>("");
-  const [addQty, setAddQty] = useState<string>("1");
   const [addReason, setAddReason] = useState<string>("");
   const [requesting, setRequesting] = useState(false);
   const [toDelete, setToDelete] = useState<Item | null>(null);
@@ -257,30 +257,31 @@ const Items = () => {
   };
 
   const openAdd = (it?: Item) => {
-    setAddItemId(it?.id ?? "");
+    setAddLines([{ ...emptyLine(), item_id: it?.id ?? "" }]);
     setAddWh(warehouses[0]?.id ?? "");
-    setAddQty("1");
     setAddReason("");
     setAddOpen(true);
   };
 
   const submitAdd = async () => {
-    if (!addItemId) return toast.error("Select an item");
-    const qty = Number(addQty);
     if (!addWh) return toast.error("Select a warehouse");
-    if (!qty || qty <= 0) return toast.error("Enter a positive quantity");
     if (!user?.id) return toast.error("Not signed in");
+    const valid = addLines.filter((l) => l.item_id && l.quantity > 0);
+    if (valid.length === 0) return toast.error("Add at least one item");
     setRequesting(true);
-    const { error } = await supabase.from("stock_requests").insert({
-      item_id: addItemId,
+    const batch_ref = valid.length > 1 ? newBatchRef("REQ") : null;
+    const payload = valid.map((l) => ({
+      item_id: l.item_id,
       warehouse_id: addWh,
-      quantity: qty,
-      reason: addReason.trim() || null,
+      quantity: l.quantity,
+      reason: (l.note?.trim() || addReason.trim() || null) as string | null,
       requested_by: user.id,
-    });
+      batch_ref,
+    }));
+    const { error } = await supabase.from("stock_requests").insert(payload);
     setRequesting(false);
     if (error) return toast.error(error.message);
-    toast.success("Request submitted — pending approval");
+    toast.success(`Submitted ${valid.length} request(s) — pending approval`);
     setAddOpen(false);
   };
 
@@ -506,27 +507,26 @@ const Items = () => {
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Item</Label>
-              <ItemPicker value={addItemId} onChange={setAddItemId} warehouseId={addWh || undefined} />
-            </div>
-            <div className="space-y-1.5">
               <Label>Warehouse</Label>
               <Select value={addWh} onValueChange={setAddWh}>
                 <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
                 <SelectContent>
-                  {warehouses.map((w) => {
-                    const q = addItemId ? ((stockByWh.get(addItemId) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0) : 0;
-                    return <SelectItem key={w.id} value={w.id}>{w.name}{addItemId ? ` — ${q} on hand` : ""}</SelectItem>;
-                  })}
+                  {warehouses.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+            <MultiLineItems
+              value={addLines}
+              onChange={setAddLines}
+              warehouseId={addWh || undefined}
+              showNote
+              notePlaceholder="Reason"
+              hidePickerWarehouseFilter
+            />
             <div className="space-y-1.5">
-              <Label>Quantity to add</Label>
-              <Input type="number" min="1" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Reason / source (optional)</Label>
+              <Label>Default reason / source (optional)</Label>
               <Input value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
             </div>
           </div>
