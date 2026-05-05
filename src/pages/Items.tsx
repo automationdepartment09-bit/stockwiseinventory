@@ -507,27 +507,26 @@ const Items = () => {
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Item</Label>
-              <ItemPicker value={addItemId} onChange={setAddItemId} warehouseId={addWh || undefined} />
-            </div>
-            <div className="space-y-1.5">
               <Label>Warehouse</Label>
               <Select value={addWh} onValueChange={setAddWh}>
                 <SelectTrigger><SelectValue placeholder="Select warehouse" /></SelectTrigger>
                 <SelectContent>
-                  {warehouses.map((w) => {
-                    const q = addItemId ? ((stockByWh.get(addItemId) ?? []).find((r) => r.warehouse_id === w.id)?.quantity ?? 0) : 0;
-                    return <SelectItem key={w.id} value={w.id}>{w.name}{addItemId ? ` — ${q} on hand` : ""}</SelectItem>;
-                  })}
+                  {warehouses.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+            <MultiLineItems
+              value={addLines}
+              onChange={setAddLines}
+              warehouseId={addWh || undefined}
+              showNote
+              notePlaceholder="Reason"
+              hidePickerWarehouseFilter
+            />
             <div className="space-y-1.5">
-              <Label>Quantity to add</Label>
-              <Input type="number" min="1" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Reason / source (optional)</Label>
+              <Label>Default reason / source (optional)</Label>
               <Input value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="Restock, supplier delivery…" maxLength={200} />
             </div>
           </div>
