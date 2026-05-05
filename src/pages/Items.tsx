@@ -59,9 +59,8 @@ const Items = () => {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [addItemId, setAddItemId] = useState<string>("");
+  const [addLines, setAddLines] = useState<LineItem[]>([emptyLine()]);
   const [addWh, setAddWh] = useState<string>("");
-  const [addQty, setAddQty] = useState<string>("1");
   const [addReason, setAddReason] = useState<string>("");
   const [requesting, setRequesting] = useState(false);
   const [toDelete, setToDelete] = useState<Item | null>(null);
