@@ -54,7 +54,8 @@ export const MultiLineItems = ({
           <Plus className="mr-1 h-3.5 w-3.5" />Add item
         </Button>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+
         {value.map((line, idx) => (
           <div key={idx} className="grid grid-cols-12 gap-2 rounded-md border border-border/60 p-2">
             <div className={showNote ? "col-span-6" : "col-span-8"}>
