@@ -100,6 +100,7 @@ const Returns = () => {
   const [reviewAction, setReviewAction] = useState<"complete" | "cancel">("complete");
   const [reviewNote, setReviewNote] = useState("");
   const [toDelete, setToDelete] = useState<ReturnRow | null>(null);
+  const [wdPickerOpen, setWdPickerOpen] = useState(false);
 
   // form state
   const [fWithdrawal, setFWithdrawal] = useState<string>("__none__");
