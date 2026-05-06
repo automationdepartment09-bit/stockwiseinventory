@@ -492,7 +492,65 @@ const Returns = () => {
             <TabsList>
               <TabsTrigger value="returns">Returns ({returnsRows.length})</TabsTrigger>
               <TabsTrigger value="damages">Damages ({damagesRows.length})</TabsTrigger>
+              <TabsTrigger value="borrow">Borrow ({borrows.length})</TabsTrigger>
             </TabsList>
+            <TabsContent value="borrow">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Withdrawn</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Warehouse</TableHead>
+                      <TableHead>Borrower</TableHead>
+                      <TableHead>Purpose</TableHead>
+                      <TableHead>Expected</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Returned</TableHead>
+                      <TableHead className="text-right">Remaining</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {borrows.length === 0 && (
+                      <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">No outstanding borrows.</TableCell></TableRow>
+                    )}
+                    {borrows.map(({ w, returned, remaining }) => {
+                      const it = itemMap[w.item_id];
+                      const wh = whMap[w.warehouse_id];
+                      const by = w.withdrawn_by_user_id ? (userMap[w.withdrawn_by_user_id]?.full_name || userMap[w.withdrawn_by_user_id]?.email) : w.withdrawn_by_name;
+                      const overdue = w.expected_return_date && new Date(w.expected_return_date) < new Date(new Date().toDateString());
+                      return (
+                        <TableRow key={w.id}>
+                          <TableCell className="whitespace-nowrap">{w.withdrawal_date}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{it?.name ?? "—"}</div>
+                            <div className="text-xs text-muted-foreground">{it?.sku}</div>
+                          </TableCell>
+                          <TableCell>{wh?.name ?? "—"}</TableCell>
+                          <TableCell>{by ?? "—"}</TableCell>
+                          <TableCell className="max-w-[220px] truncate" title={w.purpose}>{w.purpose}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {w.expected_return_date ?? "—"}
+                            {overdue && <Badge variant="outline" className="ml-1 bg-destructive/20 text-destructive">overdue</Badge>}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{w.quantity}</TableCell>
+                          <TableCell className="text-right tabular-nums">{returned}</TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">{remaining}</TableCell>
+                          <TableCell className="text-right">
+                            {canCreate && (
+                              <Button size="sm" variant="outline" onClick={() => { resetForm(); onPickWithdrawal(w.id); setFLines([{ item_id: w.item_id, quantity: remaining }]); setOpen(true); }}>
+                                <Undo2 className="mr-1 h-3.5 w-3.5" />Return
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
             {(["returns", "damages"] as const).map((tab) => {
               const list = tab === "returns" ? returnsRows : damagesRows;
               const isDamage = tab === "damages";
