@@ -162,6 +162,32 @@ const Returns = () => {
   const returnsRows = useMemo(() => applyFilters(rows.filter((r) => r.condition !== "damaged" && r.condition !== "lost")), [rows, filters, itemMap, whMap, userMap]);
   const damagesRows = useMemo(() => applyFilters(rows.filter((r) => r.condition === "damaged" || r.condition === "lost")), [rows, filters, itemMap, whMap, userMap]);
 
+  // Borrows = approved withdrawals with return_expected, computing remaining qty
+  const borrows = useMemo(() => {
+    const returnedByWd: Record<string, number> = {};
+    for (const r of rows) {
+      if (!r.withdrawal_id || r.status === "cancelled") continue;
+      returnedByWd[r.withdrawal_id] = (returnedByWd[r.withdrawal_id] ?? 0) + r.quantity;
+    }
+    return withdrawals
+      .filter((w) => w.return_expected)
+      .map((w) => ({ w, returned: returnedByWd[w.id] ?? 0, remaining: Math.max(0, w.quantity - (returnedByWd[w.id] ?? 0)) }))
+      .filter(({ w, remaining }) => {
+        if (remaining <= 0) return false;
+        if (filters.warehouse !== "all" && w.warehouse_id !== filters.warehouse) return false;
+        if (filters.project !== "all") {
+          if (filters.project === "__none__" ? w.project_id !== null : w.project_id !== filters.project) return false;
+        }
+        if (!inDateRange(w.withdrawal_date, filters.from, filters.to)) return false;
+        const item = itemMap[w.item_id];
+        if (filters.category !== "all" && item?.category_id !== filters.category) return false;
+        const wh = whMap[w.warehouse_id];
+        const by = w.withdrawn_by_user_id ? (userMap[w.withdrawn_by_user_id]?.full_name ?? userMap[w.withdrawn_by_user_id]?.email) : w.withdrawn_by_name;
+        if (!matchesQuery(filters.q, [item?.name, item?.sku, item?.barcode, item?.ref_number, wh?.name, by, w.purpose])) return false;
+        return true;
+      });
+  }, [withdrawals, rows, filters, itemMap, whMap, userMap]);
+
   const resetForm = () => {
     setFWithdrawal("__none__"); setFLines([emptyLine()]); setFWarehouse(""); setFProject("__none__");
     setFByUser("__none__"); setFByName("");
