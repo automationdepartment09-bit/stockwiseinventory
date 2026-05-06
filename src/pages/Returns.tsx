@@ -434,83 +434,96 @@ const Returns = () => {
             ]}
             projects={projects.map((p) => ({ value: p.id, label: p.code ? `${p.code} · ${p.name}` : p.name }))}
             requesters={users.map((u) => ({ value: u.id, label: u.full_name || u.email || "User" }))}
-            rightSlot={<span className="ml-auto text-xs text-muted-foreground">{filtered.length} record(s)</span>}
+            rightSlot={<span className="ml-auto text-xs text-muted-foreground">{returnsRows.length + damagesRows.length} record(s)</span>}
           />
 
-
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Warehouse</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead>Returned by</TableHead>
-                  <TableHead>Condition</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No returns yet.</TableCell></TableRow>
-                )}
-                {filtered.map((r) => {
-                  const item = itemMap[r.item_id];
-                  const wh = whMap[r.warehouse_id];
-                  const isOwner = r.created_by === user?.id;
-                  return (
-                    <TableRow key={r.id}>
-                      <TableCell className="whitespace-nowrap">
-                        <div>{r.return_date}</div>
-                        <div className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleTimeString()}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{item?.name ?? "—"}</div>
-                        <div className="text-xs text-muted-foreground">{item?.sku}</div>
-                      </TableCell>
-                      <TableCell>{wh?.name ?? "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.quantity}</TableCell>
-                      <TableCell>{byLabel(r)}</TableCell>
-                      <TableCell><Badge className={conditionBadge[r.condition]} variant="outline">{r.condition}</Badge></TableCell>
-                      <TableCell><Badge className={statusBadge[r.status]} variant="outline">{r.status}</Badge></TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button size="icon" variant="ghost" onClick={() => setView(r)} title="Details">
-                            <FileSearch className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" onClick={() => printReturn(r)} title="Print receipt">
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                          {r.status === "pending" && canReview && (
-                            <>
-                              <Button size="icon" variant="ghost" title="Complete" onClick={() => { setReviewing(r); setReviewAction("complete"); setReviewNote(""); }}>
-                                <Check className="h-4 w-4 text-success" />
-                              </Button>
-                              <Button size="icon" variant="ghost" title="Cancel" onClick={() => { setReviewing(r); setReviewAction("cancel"); setReviewNote(""); }}>
-                                <X className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </>
-                          )}
-                          {r.status === "pending" && isOwner && !canReview && (
-                            <Button size="icon" variant="ghost" title="Cancel" onClick={() => cancelOwn(r)}>
-                              <Undo2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {isAdmin && (
-                            <Button size="icon" variant="ghost" title="Delete" onClick={() => setToDelete(r)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <Tabs defaultValue="returns" className="w-full">
+            <TabsList>
+              <TabsTrigger value="returns">Returns ({returnsRows.length})</TabsTrigger>
+              <TabsTrigger value="damages">Damages ({damagesRows.length})</TabsTrigger>
+            </TabsList>
+            {(["returns", "damages"] as const).map((tab) => {
+              const list = tab === "returns" ? returnsRows : damagesRows;
+              const isDamage = tab === "damages";
+              return (
+                <TabsContent key={tab} value={tab}>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Item</TableHead>
+                          <TableHead>Warehouse</TableHead>
+                          <TableHead className="text-right">Qty</TableHead>
+                          <TableHead>{isDamage ? "Reported by" : "Returned by"}</TableHead>
+                          <TableHead>Condition</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {list.length === 0 && (
+                          <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">{isDamage ? "No damaged items." : "No returns yet."}</TableCell></TableRow>
+                        )}
+                        {list.map((r) => {
+                          const item = itemMap[r.item_id];
+                          const wh = whMap[r.warehouse_id];
+                          const isOwner = r.created_by === user?.id;
+                          return (
+                            <TableRow key={r.id}>
+                              <TableCell className="whitespace-nowrap">
+                                <div>{r.return_date}</div>
+                                <div className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleTimeString()}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium">{item?.name ?? "—"}</div>
+                                <div className="text-xs text-muted-foreground">{item?.sku}</div>
+                              </TableCell>
+                              <TableCell>{wh?.name ?? "—"}</TableCell>
+                              <TableCell className="text-right tabular-nums">{r.quantity}</TableCell>
+                              <TableCell>{byLabel(r)}</TableCell>
+                              <TableCell><Badge className={conditionBadge[r.condition]} variant="outline">{r.condition}</Badge></TableCell>
+                              <TableCell><Badge className={statusBadge[r.status]} variant="outline">{r.status}</Badge></TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button size="icon" variant="ghost" onClick={() => setView(r)} title="Details">
+                                    <FileSearch className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={() => printReturn(r)} title="Print receipt">
+                                    <Printer className="h-4 w-4" />
+                                  </Button>
+                                  {r.status === "pending" && canReview && (
+                                    <>
+                                      <Button size={isDamage ? "sm" : "icon"} variant={isDamage ? "default" : "ghost"} title={isDamage ? "Approve damage" : "Complete"} onClick={() => { setReviewing(r); setReviewAction("complete"); setReviewNote(""); }}>
+                                        {isDamage ? <><Check className="mr-1 h-4 w-4" />Approve</> : <Check className="h-4 w-4 text-success" />}
+                                      </Button>
+                                      <Button size="icon" variant="ghost" title={isDamage ? "Reject" : "Cancel"} onClick={() => { setReviewing(r); setReviewAction("cancel"); setReviewNote(""); }}>
+                                        <X className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </>
+                                  )}
+                                  {r.status === "pending" && isOwner && !canReview && (
+                                    <Button size="icon" variant="ghost" title="Cancel" onClick={() => cancelOwn(r)}>
+                                      <Undo2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  {isAdmin && (
+                                    <Button size="icon" variant="ghost" title="Delete" onClick={() => setToDelete(r)}>
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              );
+            })}
+          </Tabs>
         </CardContent>
       </Card>
 
