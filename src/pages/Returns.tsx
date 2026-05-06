@@ -261,7 +261,7 @@ const Returns = () => {
   const exportCsv = () => {
     const header = ["Date","Item","SKU","Warehouse","Qty","Returned by","Condition","Status","Notes"];
     const lines = [header.join(",")].concat(
-      filtered.map((r) => {
+      [...returnsRows, ...damagesRows].map((r) => {
         const item = itemMap[r.item_id];
         const wh = whMap[r.warehouse_id];
         const by = r.returned_by_user_id ? (userMap[r.returned_by_user_id]?.full_name ?? userMap[r.returned_by_user_id]?.email ?? "User") : r.returned_by_name;
