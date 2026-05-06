@@ -15,7 +15,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip, Undo2, Printer } from "lucide-react";
+import { Plus, Check, X, Trash2, Download, FileSearch, Paperclip, Undo2, Printer, ChevronsUpDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
@@ -98,6 +100,7 @@ const Returns = () => {
   const [reviewAction, setReviewAction] = useState<"complete" | "cancel">("complete");
   const [reviewNote, setReviewNote] = useState("");
   const [toDelete, setToDelete] = useState<ReturnRow | null>(null);
+  const [wdPickerOpen, setWdPickerOpen] = useState(false);
 
   // form state
   const [fWithdrawal, setFWithdrawal] = useState<string>("__none__");
@@ -158,6 +161,32 @@ const Returns = () => {
 
   const returnsRows = useMemo(() => applyFilters(rows.filter((r) => r.condition !== "damaged" && r.condition !== "lost")), [rows, filters, itemMap, whMap, userMap]);
   const damagesRows = useMemo(() => applyFilters(rows.filter((r) => r.condition === "damaged" || r.condition === "lost")), [rows, filters, itemMap, whMap, userMap]);
+
+  // Borrows = approved withdrawals with return_expected, computing remaining qty
+  const borrows = useMemo(() => {
+    const returnedByWd: Record<string, number> = {};
+    for (const r of rows) {
+      if (!r.withdrawal_id || r.status === "cancelled") continue;
+      returnedByWd[r.withdrawal_id] = (returnedByWd[r.withdrawal_id] ?? 0) + r.quantity;
+    }
+    return withdrawals
+      .filter((w) => w.return_expected)
+      .map((w) => ({ w, returned: returnedByWd[w.id] ?? 0, remaining: Math.max(0, w.quantity - (returnedByWd[w.id] ?? 0)) }))
+      .filter(({ w, remaining }) => {
+        if (remaining <= 0) return false;
+        if (filters.warehouse !== "all" && w.warehouse_id !== filters.warehouse) return false;
+        if (filters.project !== "all") {
+          if (filters.project === "__none__" ? w.project_id !== null : w.project_id !== filters.project) return false;
+        }
+        if (!inDateRange(w.withdrawal_date, filters.from, filters.to)) return false;
+        const item = itemMap[w.item_id];
+        if (filters.category !== "all" && item?.category_id !== filters.category) return false;
+        const wh = whMap[w.warehouse_id];
+        const by = w.withdrawn_by_user_id ? (userMap[w.withdrawn_by_user_id]?.full_name ?? userMap[w.withdrawn_by_user_id]?.email) : w.withdrawn_by_name;
+        if (!matchesQuery(filters.q, [item?.name, item?.sku, item?.barcode, item?.ref_number, wh?.name, by, w.purpose])) return false;
+        return true;
+      });
+  }, [withdrawals, rows, filters, itemMap, whMap, userMap]);
 
   const resetForm = () => {
     setFWithdrawal("__none__"); setFLines([emptyLine()]); setFWarehouse(""); setFProject("__none__");
@@ -333,20 +362,42 @@ const Returns = () => {
                   <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Linked withdrawal (optional)</Label>
-                      <Select value={fWithdrawal} onValueChange={onPickWithdrawal}>
-                        <SelectTrigger><SelectValue placeholder="Select an approved withdrawal" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">— None / standalone —</SelectItem>
-                          {withdrawals.map((w) => {
-                            const it = itemMap[w.item_id];
-                            return (
-                              <SelectItem key={w.id} value={w.id}>
-                                {w.withdrawal_date} · {it?.sku ?? ""} {it?.name ?? "Item"} · {w.quantity} · {w.purpose}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={wdPickerOpen} onOpenChange={setWdPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+                            {fWithdrawal === "__none__" ? <span className="text-muted-foreground">— None / standalone —</span> : (() => {
+                              const w = wdMap[fWithdrawal]; const it = w ? itemMap[w.item_id] : null;
+                              return w ? `${w.withdrawal_date} · ${it?.sku ?? ""} ${it?.name ?? "Item"} · ${w.quantity} · ${w.purpose}` : "Select…";
+                            })()}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search by item, SKU, purpose, name…" />
+                            <CommandList>
+                              <CommandEmpty>No withdrawal found.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem value="__none__" onSelect={() => { onPickWithdrawal("__none__"); setWdPickerOpen(false); }}>— None / standalone —</CommandItem>
+                                {withdrawals.map((w) => {
+                                  const it = itemMap[w.item_id];
+                                  const wh = whMap[w.warehouse_id];
+                                  const by = w.withdrawn_by_user_id ? (userMap[w.withdrawn_by_user_id]?.full_name || userMap[w.withdrawn_by_user_id]?.email) : w.withdrawn_by_name;
+                                  const label = `${w.withdrawal_date} ${it?.sku ?? ""} ${it?.name ?? ""} ${w.purpose} ${wh?.name ?? ""} ${by ?? ""}`;
+                                  return (
+                                    <CommandItem key={w.id} value={label} onSelect={() => { onPickWithdrawal(w.id); setWdPickerOpen(false); }}>
+                                      <div className="flex flex-col">
+                                        <span>{w.withdrawal_date} · {it?.sku ?? ""} {it?.name ?? "Item"} · {w.quantity}</span>
+                                        <span className="text-xs text-muted-foreground">{w.purpose} · {wh?.name ?? ""}{by ? ` · ${by}` : ""}</span>
+                                      </div>
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Warehouse *</Label>
@@ -441,7 +492,65 @@ const Returns = () => {
             <TabsList>
               <TabsTrigger value="returns">Returns ({returnsRows.length})</TabsTrigger>
               <TabsTrigger value="damages">Damages ({damagesRows.length})</TabsTrigger>
+              <TabsTrigger value="borrow">Borrow ({borrows.length})</TabsTrigger>
             </TabsList>
+            <TabsContent value="borrow">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Withdrawn</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Warehouse</TableHead>
+                      <TableHead>Borrower</TableHead>
+                      <TableHead>Purpose</TableHead>
+                      <TableHead>Expected</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Returned</TableHead>
+                      <TableHead className="text-right">Remaining</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {borrows.length === 0 && (
+                      <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">No outstanding borrows.</TableCell></TableRow>
+                    )}
+                    {borrows.map(({ w, returned, remaining }) => {
+                      const it = itemMap[w.item_id];
+                      const wh = whMap[w.warehouse_id];
+                      const by = w.withdrawn_by_user_id ? (userMap[w.withdrawn_by_user_id]?.full_name || userMap[w.withdrawn_by_user_id]?.email) : w.withdrawn_by_name;
+                      const overdue = w.expected_return_date && new Date(w.expected_return_date) < new Date(new Date().toDateString());
+                      return (
+                        <TableRow key={w.id}>
+                          <TableCell className="whitespace-nowrap">{w.withdrawal_date}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{it?.name ?? "—"}</div>
+                            <div className="text-xs text-muted-foreground">{it?.sku}</div>
+                          </TableCell>
+                          <TableCell>{wh?.name ?? "—"}</TableCell>
+                          <TableCell>{by ?? "—"}</TableCell>
+                          <TableCell className="max-w-[220px] truncate" title={w.purpose}>{w.purpose}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {w.expected_return_date ?? "—"}
+                            {overdue && <Badge variant="outline" className="ml-1 bg-destructive/20 text-destructive">overdue</Badge>}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{w.quantity}</TableCell>
+                          <TableCell className="text-right tabular-nums">{returned}</TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">{remaining}</TableCell>
+                          <TableCell className="text-right">
+                            {canCreate && (
+                              <Button size="sm" variant="outline" onClick={() => { resetForm(); onPickWithdrawal(w.id); setFLines([{ item_id: w.item_id, quantity: remaining }]); setOpen(true); }}>
+                                <Undo2 className="mr-1 h-3.5 w-3.5" />Return
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
             {(["returns", "damages"] as const).map((tab) => {
               const list = tab === "returns" ? returnsRows : damagesRows;
               const isDamage = tab === "damages";
