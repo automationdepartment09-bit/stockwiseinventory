@@ -362,20 +362,42 @@ const Returns = () => {
                   <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Linked withdrawal (optional)</Label>
-                      <Select value={fWithdrawal} onValueChange={onPickWithdrawal}>
-                        <SelectTrigger><SelectValue placeholder="Select an approved withdrawal" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">— None / standalone —</SelectItem>
-                          {withdrawals.map((w) => {
-                            const it = itemMap[w.item_id];
-                            return (
-                              <SelectItem key={w.id} value={w.id}>
-                                {w.withdrawal_date} · {it?.sku ?? ""} {it?.name ?? "Item"} · {w.quantity} · {w.purpose}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={wdPickerOpen} onOpenChange={setWdPickerOpen}>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+                            {fWithdrawal === "__none__" ? <span className="text-muted-foreground">— None / standalone —</span> : (() => {
+                              const w = wdMap[fWithdrawal]; const it = w ? itemMap[w.item_id] : null;
+                              return w ? `${w.withdrawal_date} · ${it?.sku ?? ""} ${it?.name ?? "Item"} · ${w.quantity} · ${w.purpose}` : "Select…";
+                            })()}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search by item, SKU, purpose, name…" />
+                            <CommandList>
+                              <CommandEmpty>No withdrawal found.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem value="__none__" onSelect={() => { onPickWithdrawal("__none__"); setWdPickerOpen(false); }}>— None / standalone —</CommandItem>
+                                {withdrawals.map((w) => {
+                                  const it = itemMap[w.item_id];
+                                  const wh = whMap[w.warehouse_id];
+                                  const by = w.withdrawn_by_user_id ? (userMap[w.withdrawn_by_user_id]?.full_name || userMap[w.withdrawn_by_user_id]?.email) : w.withdrawn_by_name;
+                                  const label = `${w.withdrawal_date} ${it?.sku ?? ""} ${it?.name ?? ""} ${w.purpose} ${wh?.name ?? ""} ${by ?? ""}`;
+                                  return (
+                                    <CommandItem key={w.id} value={label} onSelect={() => { onPickWithdrawal(w.id); setWdPickerOpen(false); }}>
+                                      <div className="flex flex-col">
+                                        <span>{w.withdrawal_date} · {it?.sku ?? ""} {it?.name ?? "Item"} · {w.quantity}</span>
+                                        <span className="text-xs text-muted-foreground">{w.purpose} · {wh?.name ?? ""}{by ? ` · ${by}` : ""}</span>
+                                      </div>
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label>Warehouse *</Label>
