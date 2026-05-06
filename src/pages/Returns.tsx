@@ -140,23 +140,24 @@ const Returns = () => {
   const projectMap = useMemo(() => Object.fromEntries(projects.map((p) => [p.id, p])), [projects]);
   const wdMap = useMemo(() => Object.fromEntries(withdrawals.map((w) => [w.id, w])), [withdrawals]);
 
-  const filtered = useMemo(() => {
-    return rows.filter((r) => {
-      if (filters.status !== "all" && r.status !== filters.status) return false;
-      if (filters.warehouse !== "all" && r.warehouse_id !== filters.warehouse) return false;
-      if (filters.project !== "all") {
-        if (filters.project === "__none__" ? r.project_id !== null : r.project_id !== filters.project) return false;
-      }
-      if (filters.requester !== "all" && r.created_by !== filters.requester) return false;
-      if (!inDateRange(r.return_date, filters.from, filters.to)) return false;
-      const item = itemMap[r.item_id];
-      if (filters.category !== "all" && item?.category_id !== filters.category) return false;
-      const wh = whMap[r.warehouse_id];
-      const by = r.returned_by_user_id ? (userMap[r.returned_by_user_id]?.full_name ?? userMap[r.returned_by_user_id]?.email) : r.returned_by_name;
-      if (!matchesQuery(filters.q, [item?.name, item?.sku, item?.barcode, item?.ref_number, wh?.name, by, r.notes, r.condition])) return false;
-      return true;
-    });
-  }, [rows, filters, itemMap, whMap, userMap]);
+  const applyFilters = (list: ReturnRow[]) => list.filter((r) => {
+    if (filters.status !== "all" && r.status !== filters.status) return false;
+    if (filters.warehouse !== "all" && r.warehouse_id !== filters.warehouse) return false;
+    if (filters.project !== "all") {
+      if (filters.project === "__none__" ? r.project_id !== null : r.project_id !== filters.project) return false;
+    }
+    if (filters.requester !== "all" && r.created_by !== filters.requester) return false;
+    if (!inDateRange(r.return_date, filters.from, filters.to)) return false;
+    const item = itemMap[r.item_id];
+    if (filters.category !== "all" && item?.category_id !== filters.category) return false;
+    const wh = whMap[r.warehouse_id];
+    const by = r.returned_by_user_id ? (userMap[r.returned_by_user_id]?.full_name ?? userMap[r.returned_by_user_id]?.email) : r.returned_by_name;
+    if (!matchesQuery(filters.q, [item?.name, item?.sku, item?.barcode, item?.ref_number, wh?.name, by, r.notes, r.condition])) return false;
+    return true;
+  });
+
+  const returnsRows = useMemo(() => applyFilters(rows.filter((r) => r.condition !== "damaged" && r.condition !== "lost")), [rows, filters, itemMap, whMap, userMap]);
+  const damagesRows = useMemo(() => applyFilters(rows.filter((r) => r.condition === "damaged" || r.condition === "lost")), [rows, filters, itemMap, whMap, userMap]);
 
   const resetForm = () => {
     setFWithdrawal("__none__"); setFLines([emptyLine()]); setFWarehouse(""); setFProject("__none__");
