@@ -38,6 +38,7 @@ export const MultiLineItems = ({
   notePlaceholder,
   hidePickerWarehouseFilter,
   minOne = true,
+  showDamaged = false,
 }: Props) => {
   const update = (idx: number, patch: Partial<LineItem>) => {
     onChange(value.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
