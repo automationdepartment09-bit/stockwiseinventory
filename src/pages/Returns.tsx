@@ -198,8 +198,18 @@ const Returns = () => {
       attachment_name = fFile.name;
     }
 
-    const batch_ref = valid.length > 1 ? newBatchRef("RET") : null;
-    const payload = valid.map((l) => ({
+    // Split each line into "good" portion and "damaged" portion
+    const expanded: { item_id: string; quantity: number; condition: Condition }[] = [];
+    for (const l of valid) {
+      const dmg = Math.min(Math.max(0, l.damaged ?? 0), l.quantity);
+      const good = l.quantity - dmg;
+      if (good > 0) expanded.push({ item_id: l.item_id, quantity: good, condition: fCondition });
+      if (dmg > 0) expanded.push({ item_id: l.item_id, quantity: dmg, condition: "damaged" });
+    }
+    if (expanded.length === 0) { setSubmitting(false); return toast.error("Nothing to submit"); }
+
+    const batch_ref = expanded.length > 1 ? newBatchRef("RET") : null;
+    const payload = expanded.map((l) => ({
       withdrawal_id: fWithdrawal === "__none__" ? null : fWithdrawal,
       item_id: l.item_id,
       warehouse_id: fWarehouse,
@@ -208,7 +218,7 @@ const Returns = () => {
       returned_by_user_id: fByUser === "__none__" ? null : fByUser,
       returned_by_name: fByName.trim() || null,
       return_date: fDate,
-      condition: fCondition,
+      condition: l.condition,
       notes: fNotes.trim() || null,
       attachment_url,
       attachment_name,
