@@ -356,7 +356,8 @@ const Returns = () => {
                       </Select>
                     </div>
                     <div className="sm:col-span-2">
-                      <MultiLineItems value={fLines} onChange={setFLines} warehouseId={fWarehouse || undefined} />
+                      <MultiLineItems value={fLines} onChange={setFLines} warehouseId={fWarehouse || undefined} showDamaged />
+                      <p className="mt-1 text-xs text-muted-foreground">Optional <strong>Damaged</strong> qty (subset of total) is split into a separate damaged record requiring approval.</p>
                     </div>
                     <div className="space-y-1.5">
                       <Label>Return date *</Label>
