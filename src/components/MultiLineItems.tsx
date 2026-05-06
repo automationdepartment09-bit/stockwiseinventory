@@ -8,6 +8,7 @@ export interface LineItem {
   item_id: string;
   quantity: number;
   note?: string;
+  damaged?: number;
 }
 
 interface Props {
@@ -19,6 +20,7 @@ interface Props {
   /** Hide the picker's warehouse-stock filter (when warehouse already constrained). */
   hidePickerWarehouseFilter?: boolean;
   minOne?: boolean;
+  showDamaged?: boolean;
 }
 
 export const emptyLine = (): LineItem => ({ item_id: "", quantity: 1, note: "" });
@@ -36,6 +38,7 @@ export const MultiLineItems = ({
   notePlaceholder,
   hidePickerWarehouseFilter,
   minOne = true,
+  showDamaged = false,
 }: Props) => {
   const update = (idx: number, patch: Partial<LineItem>) => {
     onChange(value.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
@@ -58,7 +61,7 @@ export const MultiLineItems = ({
 
         {value.map((line, idx) => (
           <div key={idx} className="grid grid-cols-12 gap-2 rounded-md border border-border/60 p-2">
-            <div className={showNote ? "col-span-6" : "col-span-8"}>
+            <div className={showDamaged ? (showNote ? "col-span-5" : "col-span-6") : (showNote ? "col-span-6" : "col-span-8")}>
               <ItemPicker
                 value={line.item_id}
                 onChange={(id) => update(idx, { item_id: id })}
@@ -66,7 +69,7 @@ export const MultiLineItems = ({
                 showWarehouseFilter={hidePickerWarehouseFilter ? false : undefined}
               />
             </div>
-            <div className="col-span-3">
+            <div className={showDamaged ? "col-span-2" : "col-span-3"}>
               <Input
                 type="number"
                 min={1}
@@ -75,6 +78,18 @@ export const MultiLineItems = ({
                 placeholder="Qty"
               />
             </div>
+            {showDamaged && (
+              <div className="col-span-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={line.damaged ?? 0}
+                  onChange={(e) => update(idx, { damaged: Math.max(0, Number(e.target.value) || 0) })}
+                  placeholder="Damaged"
+                  title="Damaged qty (subset of total)"
+                />
+              </div>
+            )}
             {showNote && (
               <div className="col-span-2">
                 <Input
