@@ -12,7 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, FolderKanban } from "lucide-react";
+import { Plus, Pencil, Trash2, FolderKanban, Boxes } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ItemPicker } from "@/components/ItemPicker";
 import { toast } from "sonner";
 
 interface Project {
@@ -34,6 +36,12 @@ const Projects = () => {
   const [editing, setEditing] = useState<Project | null>(null);
   const [toDelete, setToDelete] = useState<Project | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [materialsFor, setMaterialsFor] = useState<Project | null>(null);
+  const [matAuto, setMatAuto] = useState<any[]>([]);
+  const [matManual, setMatManual] = useState<any[]>([]);
+  const [itemMap, setItemMap] = useState<Map<string, { name: string; sku: string }>>(new Map());
+  const [mItem, setMItem] = useState(""); const [mDesc, setMDesc] = useState("");
+  const [mQty, setMQty] = useState<number>(1); const [mUnit, setMUnit] = useState(""); const [mCost, setMCost] = useState<number>(0);
 
   const [fName, setFName] = useState("");
   const [fCode, setFCode] = useState("");
