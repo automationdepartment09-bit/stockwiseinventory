@@ -334,13 +334,12 @@ const Movements = () => {
                     <TableCell>{m.quantity}</TableCell>
                     <TableCell className="text-xs">{whMap.get(m.from_warehouse_id ?? "")?.name ?? "—"} → {whMap.get(m.to_warehouse_id ?? "")?.name ?? "—"}</TableCell>
                     <TableCell>
-                      {s.kind === "manual"
-                        ? <Badge variant="outline" className="text-muted-foreground">Manual</Badge>
-                        : s.status === "rejected"
-                          ? <Badge variant="destructive">Rejected</Badge>
-                          : s.status === "pending"
-                            ? <Badge variant="outline">Pending</Badge>
-                            : <Badge className={statusBadgeClass[s.status]}>{STATUS_LABEL[s.status]}</Badge>}
+                      {m.status === "pending" ? <Badge variant="outline" className="bg-warning/20 text-warning">Pending</Badge>
+                       : m.status === "rejected" ? <Badge variant="destructive">Rejected</Badge>
+                       : <Badge className="bg-success/20 text-success">Approved</Badge>}
+                      {s.kind === "request" && s.status !== "pending" && (
+                        <Badge variant="outline" className="ml-1 text-[10px]">{STATUS_LABEL[s.status]}</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{m.reason ?? ""}{m.reference ? ` (${m.reference})` : ""}</TableCell>
                     <TableCell className="text-right">
