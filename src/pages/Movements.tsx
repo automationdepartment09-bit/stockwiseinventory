@@ -344,17 +344,17 @@ const Movements = () => {
                     <TableCell className="text-xs text-muted-foreground">{m.reason ?? ""}{m.reference ? ` (${m.reference})` : ""}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {canReview && m.status === "pending" && (
+                          <>
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-success" onClick={() => review(m, "approved")}>Approve</Button>
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-destructive" onClick={() => { const n = window.prompt("Reject reason (optional)?") ?? undefined; review(m, "rejected", n || undefined); }}>Reject</Button>
+                          </>
+                        )}
                         <Button size="sm" variant="ghost" onClick={() => printMove(m)} title="Print receipt">
                           <Printer className="h-3.5 w-3.5" />
                         </Button>
                         {canDelete && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setToDelete(m)}
-                            title="Delete"
-                          >
+                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setToDelete(m)} title="Delete">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         )}
