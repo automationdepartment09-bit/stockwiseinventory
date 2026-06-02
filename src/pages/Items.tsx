@@ -555,6 +555,68 @@ const Items = () => {
         </CardContent>
       </Card>
 
+      {/* Batch new items dialog */}
+      <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Batch new items</DialogTitle>
+            <DialogDescription>Create many items in one category at once. SKUs auto-generate.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <Select value={batchCat} onValueChange={setBatchCat}>
+                <SelectTrigger><SelectValue placeholder="Choose category…" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="max-h-[55vh] overflow-y-auto rounded-md border border-border/60">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[26%]">Name *</TableHead>
+                    <TableHead>Ref</TableHead>
+                    <TableHead className="w-[70px]">UOM</TableHead>
+                    <TableHead className="w-[90px]">Unit ₱</TableHead>
+                    <TableHead className="w-[90px]">Cost ₱</TableHead>
+                    <TableHead className="w-[80px]">Init qty</TableHead>
+                    <TableHead className="w-[80px]">Reorder</TableHead>
+                    <TableHead className="w-[40px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {batchRows.map((r, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell><Input value={r.name} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,name:e.target.value}:x))} placeholder="Item name" /></TableCell>
+                      <TableCell><Input value={r.ref_number} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,ref_number:e.target.value}:x))} /></TableCell>
+                      <TableCell><Input value={r.uom} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,uom:e.target.value}:x))} /></TableCell>
+                      <TableCell><Input type="number" step="0.01" value={r.unit_price} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,unit_price:Number(e.target.value)}:x))} /></TableCell>
+                      <TableCell><Input type="number" step="0.01" value={r.cost_price} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,cost_price:Number(e.target.value)}:x))} /></TableCell>
+                      <TableCell><Input type="number" min="0" value={r.initial_quantity} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,initial_quantity:Number(e.target.value)}:x))} /></TableCell>
+                      <TableCell><Input type="number" min="0" value={r.reorder_level} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,reorder_level:Number(e.target.value)}:x))} /></TableCell>
+                      <TableCell>
+                        <Button type="button" size="icon" variant="ghost" disabled={batchRows.length===1} onClick={() => setBatchRows(p => p.filter((_,i)=>i!==idx))}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={() => setBatchRows(p => [...p, { name:"", ref_number:"", uom:"", unit_price:0, cost_price:0, initial_quantity:0, reorder_level:0 }])}>
+              <Plus className="mr-1 h-3.5 w-3.5" />Add row
+            </Button>
+            <p className="text-xs text-muted-foreground">{batchRows.filter(r=>r.name.trim()).length} item(s) ready</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchOpen(false)}>Cancel</Button>
+            <Button onClick={submitBatch} disabled={batchSaving}>{batchSaving ? "Creating…" : "Create all"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
