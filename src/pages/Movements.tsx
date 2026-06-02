@@ -52,6 +52,7 @@ const STATUS_FILTER_VALUES: Array<"all" | "manual" | ReqStatus> = [
 const Movements = () => {
   const { user, hasRole } = useAuth();
   const canCreate = hasRole("admin", "manager", "staff");
+  const canReview = hasRole("admin", "manager");
   const canDelete = hasRole("admin");
   const [moves, setMoves] = useState<Move[]>([]);
   const [items, setItems] = useState<{id:string;name:string;sku:string;category_id?:string|null}[]>([]);
