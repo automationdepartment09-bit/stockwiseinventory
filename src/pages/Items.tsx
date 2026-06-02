@@ -295,6 +295,31 @@ const Items = () => {
     setAddOpen(false);
   };
 
+  const submitBatch = async () => {
+    const valid = batchRows.filter((r) => r.name.trim());
+    if (valid.length === 0) return toast.error("Add at least one item with a name");
+    setBatchSaving(true);
+    const payload = valid.map((r) => ({
+      name: r.name.trim(),
+      category_id: batchCat || null,
+      ref_number: r.ref_number.trim() || null,
+      uom: r.uom.trim() || null,
+      unit_price: Number(r.unit_price) || 0,
+      cost_price: Number(r.cost_price) || 0,
+      initial_quantity: Number(r.initial_quantity) || null,
+      reorder_level: Number(r.reorder_level) || 0,
+      created_by: user?.id,
+    }));
+    const { error } = await supabase.from("items").insert(payload as any);
+    setBatchSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Created ${valid.length} item(s)`);
+    setBatchOpen(false);
+    setBatchRows([{ name: "", ref_number: "", uom: "", unit_price: 0, cost_price: 0, initial_quantity: 0, reorder_level: 0 }]);
+    setBatchCat("");
+    load();
+  };
+
 
 
   return (
