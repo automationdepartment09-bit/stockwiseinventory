@@ -160,12 +160,11 @@ const Projects = () => {
                       ? <Badge className="bg-success/20 text-success">Active</Badge>
                       : <Badge variant="outline">Inactive</Badge>}
                   </TableCell>
-                  {canManage && (
-                    <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => setToDelete(p)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                    <Button size="icon" variant="ghost" onClick={() => openMaterials(p)} title="Materials"><Boxes className="h-4 w-4" /></Button>
+                    {canManage && <Button size="icon" variant="ghost" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>}
+                    {canManage && <Button size="icon" variant="ghost" onClick={() => setToDelete(p)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
