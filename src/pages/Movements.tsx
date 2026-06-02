@@ -137,8 +137,17 @@ const Movements = () => {
     }));
     const { error } = await supabase.from("stock_movements").insert(payload);
     if (error) return toast.error(error.message);
-    toast.success(valid.length > 1 ? `${valid.length} movements recorded (batch ${batch_ref})` : "Stock updated");
+    toast.success(`${valid.length} movement(s) submitted — awaiting approval`);
     setOpen(false); setFLines([emptyLine()]); setFFromWh(""); setFToWh(""); setFReason(""); setFReference(""); load();
+  };
+
+  const review = async (m: Move, status: "approved" | "rejected", note?: string) => {
+    const { error } = await supabase.from("stock_movements")
+      .update({ status, reviewed_by: user?.id, reviewed_at: new Date().toISOString(), review_note: note ?? null })
+      .eq("id", m.id);
+    if (error) return toast.error(error.message);
+    toast.success(status === "approved" ? "Movement approved & stock updated" : "Movement rejected");
+    load();
   };
 
   const itemMap = new Map(items.map(i=>[i.id,i]));
