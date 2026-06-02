@@ -61,6 +61,14 @@ const Items = () => {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [duplicateFrom, setDuplicateFrom] = useState<Item | null>(null);
+  const [dupOpen, setDupOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchCat, setBatchCat] = useState<string>("");
+  const [batchRows, setBatchRows] = useState<Array<{ name: string; ref_number: string; uom: string; unit_price: number; cost_price: number; initial_quantity: number; reorder_level: number }>>([
+    { name: "", ref_number: "", uom: "", unit_price: 0, cost_price: 0, initial_quantity: 0, reorder_level: 0 },
+  ]);
+  const [batchSaving, setBatchSaving] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addLines, setAddLines] = useState<LineItem[]>([emptyLine()]);
   const [addWh, setAddWh] = useState<string>("");
