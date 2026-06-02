@@ -90,6 +90,36 @@ const Projects = () => {
     setOpen(false); reset(); load();
   };
 
+  const openMaterials = async (p: Project) => {
+    setMaterialsFor(p);
+    setMatAuto([]); setMatManual([]); setMItem(""); setMDesc(""); setMQty(1); setMUnit(""); setMCost(0);
+    const [wd, pm, its] = await Promise.all([
+      supabase.from("withdrawals").select("id,item_id,quantity,withdrawal_date,status,purpose").eq("project_id", p.id),
+      supabase.from("project_materials").select("*").eq("project_id", p.id).order("used_on", { ascending: false }),
+      supabase.from("items").select("id,name,sku"),
+    ]);
+    setMatAuto((wd.data ?? []).filter((w: any) => w.status === "approved"));
+    setMatManual(pm.data ?? []);
+    setItemMap(new Map((its.data ?? []).map((i: any) => [i.id, { name: i.name, sku: i.sku }])));
+  };
+
+  const addManualMaterial = async () => {
+    if (!materialsFor) return;
+    if (!mItem && !mDesc.trim()) return toast.error("Pick an item or write a description");
+    const { error } = await supabase.from("project_materials").insert({
+      project_id: materialsFor.id, item_id: mItem || null, description: mDesc.trim() || null,
+      quantity: mQty, unit: mUnit.trim() || null, unit_cost: mCost, created_by: user!.id,
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Material logged");
+    openMaterials(materialsFor);
+  };
+
+  const removeManual = async (id: string) => {
+    const { error } = await supabase.from("project_materials").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    if (materialsFor) openMaterials(materialsFor);
+
   const remove = async () => {
     if (!toDelete) return;
     const { error } = await supabase.from("projects").delete().eq("id", toDelete.id);
