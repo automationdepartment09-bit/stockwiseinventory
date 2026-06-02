@@ -161,7 +161,7 @@ const Sales = () => {
       ],
       lineItems: lines.map(l => {
         const it = itemMap.get(l.item_id);
-        return { name: it?.name ?? "Item", sku: it?.sku, qty: l.quantity, unitPrice: l.unit_price, total: l.line_total };
+        return { name: it?.name ?? "Item", sku: it?.sku, qty: l.quantity, note: `₱${Number(l.unit_price).toFixed(2)} ea · ₱${Number(l.line_total).toFixed(2)}` };
       }),
       signatures: ["Issued by", "Received by"],
     });
