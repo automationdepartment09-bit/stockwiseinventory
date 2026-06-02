@@ -119,6 +119,8 @@ const Projects = () => {
     const { error } = await supabase.from("project_materials").delete().eq("id", id);
     if (error) return toast.error(error.message);
     if (materialsFor) openMaterials(materialsFor);
+  };
+
 
   const remove = async () => {
     if (!toDelete) return;
