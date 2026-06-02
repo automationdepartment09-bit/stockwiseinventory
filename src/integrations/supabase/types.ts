@@ -71,6 +71,45 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       items: {
         Row: {
           barcode: string | null
@@ -229,6 +268,59 @@ export type Database = {
         }
         Relationships: []
       }
+      project_materials: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          item_id: string | null
+          notes: string | null
+          project_id: string
+          quantity: number
+          unit: string | null
+          unit_cost: number
+          updated_at: string
+          used_on: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          item_id?: string | null
+          notes?: string | null
+          project_id: string
+          quantity?: number
+          unit?: string | null
+          unit_cost?: number
+          updated_at?: string
+          used_on?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          item_id?: string | null
+          notes?: string | null
+          project_id?: string
+          quantity?: number
+          unit?: string | null
+          unit_cost?: number
+          updated_at?: string
+          used_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_materials_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           code: string | null
@@ -337,6 +429,103 @@ export type Database = {
         }
         Relationships: []
       }
+      sale_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          line_total: number
+          quantity: number
+          sale_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          line_total?: number
+          quantity: number
+          sale_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          line_total?: number
+          quantity?: number
+          sale_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string | null
+          discount: number
+          id: string
+          invoice_no: string
+          notes: string | null
+          sale_date: string
+          status: Database["public"]["Enums"]["sale_status"]
+          subtotal: number
+          tax: number
+          total: number
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id?: string | null
+          discount?: number
+          id?: string
+          invoice_no: string
+          notes?: string | null
+          sale_date?: string
+          status?: Database["public"]["Enums"]["sale_status"]
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string | null
+          discount?: number
+          id?: string
+          invoice_no?: string
+          notes?: string | null
+          sale_date?: string
+          status?: Database["public"]["Enums"]["sale_status"]
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_levels: {
         Row: {
           id: string
@@ -391,6 +580,10 @@ export type Database = {
           quantity: number
           reason: string | null
           reference: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["movement_status"]
           to_warehouse_id: string | null
         }
         Insert: {
@@ -404,6 +597,10 @@ export type Database = {
           quantity: number
           reason?: string | null
           reference?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["movement_status"]
           to_warehouse_id?: string | null
         }
         Update: {
@@ -417,6 +614,10 @@ export type Database = {
           quantity?: number
           reason?: string | null
           reference?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["movement_status"]
           to_warehouse_id?: string | null
         }
         Relationships: [
@@ -767,6 +968,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "staff" | "viewer"
+      movement_status: "pending" | "approved" | "rejected"
       movement_type: "in" | "out" | "transfer" | "adjustment"
       request_status:
         | "pending"
@@ -777,6 +979,7 @@ export type Database = {
         | "received"
       return_condition: "good" | "damaged" | "lost" | "partial"
       return_status: "pending" | "completed" | "cancelled"
+      sale_status: "draft" | "confirmed" | "paid" | "cancelled"
       stock_status:
         | "available"
         | "reserved"
@@ -912,6 +1115,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "staff", "viewer"],
+      movement_status: ["pending", "approved", "rejected"],
       movement_type: ["in", "out", "transfer", "adjustment"],
       request_status: [
         "pending",
@@ -923,6 +1127,7 @@ export const Constants = {
       ],
       return_condition: ["good", "damaged", "lost", "partial"],
       return_status: ["pending", "completed", "cancelled"],
+      sale_status: ["draft", "confirmed", "paid", "cancelled"],
       stock_status: [
         "available",
         "reserved",

@@ -22,7 +22,8 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-interface Move { id: string; movement_type: "in"|"out"|"transfer"|"adjustment"; quantity: number; reason: string|null; reference: string|null; created_at: string; item_id: string; from_warehouse_id: string|null; to_warehouse_id: string|null; batch_ref: string|null }
+type MoveStatus = "pending" | "approved" | "rejected";
+interface Move { id: string; movement_type: "in"|"out"|"transfer"|"adjustment"; quantity: number; reason: string|null; reference: string|null; created_at: string; item_id: string; from_warehouse_id: string|null; to_warehouse_id: string|null; batch_ref: string|null; status: MoveStatus; review_note: string|null; reviewed_by: string|null; reviewed_at: string|null; created_by: string|null }
 
 type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
 
@@ -51,6 +52,7 @@ const STATUS_FILTER_VALUES: Array<"all" | "manual" | ReqStatus> = [
 const Movements = () => {
   const { user, hasRole } = useAuth();
   const canCreate = hasRole("admin", "manager", "staff");
+  const canReview = hasRole("admin", "manager");
   const canDelete = hasRole("admin");
   const [moves, setMoves] = useState<Move[]>([]);
   const [items, setItems] = useState<{id:string;name:string;sku:string;category_id?:string|null}[]>([]);
@@ -135,8 +137,17 @@ const Movements = () => {
     }));
     const { error } = await supabase.from("stock_movements").insert(payload);
     if (error) return toast.error(error.message);
-    toast.success(valid.length > 1 ? `${valid.length} movements recorded (batch ${batch_ref})` : "Stock updated");
+    toast.success(`${valid.length} movement(s) submitted — awaiting approval`);
     setOpen(false); setFLines([emptyLine()]); setFFromWh(""); setFToWh(""); setFReason(""); setFReference(""); load();
+  };
+
+  const review = async (m: Move, status: "approved" | "rejected", note?: string) => {
+    const { error } = await supabase.from("stock_movements")
+      .update({ status, reviewed_by: user?.id, reviewed_at: new Date().toISOString(), review_note: note ?? null })
+      .eq("id", m.id);
+    if (error) return toast.error(error.message);
+    toast.success(status === "approved" ? "Movement approved & stock updated" : "Movement rejected");
+    load();
   };
 
   const itemMap = new Map(items.map(i=>[i.id,i]));
@@ -323,28 +334,27 @@ const Movements = () => {
                     <TableCell>{m.quantity}</TableCell>
                     <TableCell className="text-xs">{whMap.get(m.from_warehouse_id ?? "")?.name ?? "—"} → {whMap.get(m.to_warehouse_id ?? "")?.name ?? "—"}</TableCell>
                     <TableCell>
-                      {s.kind === "manual"
-                        ? <Badge variant="outline" className="text-muted-foreground">Manual</Badge>
-                        : s.status === "rejected"
-                          ? <Badge variant="destructive">Rejected</Badge>
-                          : s.status === "pending"
-                            ? <Badge variant="outline">Pending</Badge>
-                            : <Badge className={statusBadgeClass[s.status]}>{STATUS_LABEL[s.status]}</Badge>}
+                      {m.status === "pending" ? <Badge variant="outline" className="bg-warning/20 text-warning">Pending</Badge>
+                       : m.status === "rejected" ? <Badge variant="destructive">Rejected</Badge>
+                       : <Badge className="bg-success/20 text-success">Approved</Badge>}
+                      {s.kind === "request" && s.status !== "pending" && (
+                        <Badge variant="outline" className="ml-1 text-[10px]">{STATUS_LABEL[s.status]}</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{m.reason ?? ""}{m.reference ? ` (${m.reference})` : ""}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {canReview && m.status === "pending" && (
+                          <>
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-success" onClick={() => review(m, "approved")}>Approve</Button>
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-destructive" onClick={() => { const n = window.prompt("Reject reason (optional)?") ?? undefined; review(m, "rejected", n || undefined); }}>Reject</Button>
+                          </>
+                        )}
                         <Button size="sm" variant="ghost" onClick={() => printMove(m)} title="Print receipt">
                           <Printer className="h-3.5 w-3.5" />
                         </Button>
                         {canDelete && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setToDelete(m)}
-                            title="Delete"
-                          >
+                          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setToDelete(m)} title="Delete">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         )}

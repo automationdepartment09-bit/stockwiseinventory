@@ -15,7 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus, Trash2, Pencil, ArrowLeftRight, ClipboardCheck, Undo2, History as HistoryIcon, PackageMinus } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ArrowDownToLine, ArrowUpDown, Download, Plus, Search, PackagePlus, Trash2, Pencil, ArrowLeftRight, ClipboardCheck, Undo2, History as HistoryIcon, PackageMinus, Copy, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
@@ -59,6 +61,14 @@ const Items = () => {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [duplicateFrom, setDuplicateFrom] = useState<Item | null>(null);
+  const [dupOpen, setDupOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchCat, setBatchCat] = useState<string>("");
+  const [batchRows, setBatchRows] = useState<Array<{ name: string; ref_number: string; uom: string; unit_price: number; cost_price: number; initial_quantity: number; reorder_level: number }>>([
+    { name: "", ref_number: "", uom: "", unit_price: 0, cost_price: 0, initial_quantity: 0, reorder_level: 0 },
+  ]);
+  const [batchSaving, setBatchSaving] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addLines, setAddLines] = useState<LineItem[]>([emptyLine()]);
   const [addWh, setAddWh] = useState<string>("");
@@ -285,6 +295,31 @@ const Items = () => {
     setAddOpen(false);
   };
 
+  const submitBatch = async () => {
+    const valid = batchRows.filter((r) => r.name.trim());
+    if (valid.length === 0) return toast.error("Add at least one item with a name");
+    setBatchSaving(true);
+    const payload = valid.map((r) => ({
+      name: r.name.trim(),
+      category_id: batchCat || null,
+      ref_number: r.ref_number.trim() || null,
+      uom: r.uom.trim() || null,
+      unit_price: Number(r.unit_price) || 0,
+      cost_price: Number(r.cost_price) || 0,
+      initial_quantity: Number(r.initial_quantity) || null,
+      reorder_level: Number(r.reorder_level) || 0,
+      created_by: user?.id,
+    }));
+    const { error } = await supabase.from("items").insert(payload as any);
+    setBatchSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Created ${valid.length} item(s)`);
+    setBatchOpen(false);
+    setBatchRows([{ name: "", ref_number: "", uom: "", unit_price: 0, cost_price: 0, initial_quantity: 0, reorder_level: 0 }]);
+    setBatchCat("");
+    load();
+  };
+
 
 
   return (
@@ -297,23 +332,72 @@ const Items = () => {
             <Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button>
             <Button variant="outline" onClick={() => openAdd()}><PackagePlus className="mr-2 h-4 w-4" />Add stock</Button>
             {canEdit && (
-              <Dialog open={open} onOpenChange={setOpen}>
+              <Button variant="outline" onClick={() => setBatchOpen(true)}>
+                <Layers className="mr-2 h-4 w-4" />Batch new
+              </Button>
+            )}
+            {canEdit && (
+              <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setDuplicateFrom(null); }}>
                 <DialogTrigger asChild>
                   <Button><Plus className="mr-2 h-4 w-4" />New item</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create item</DialogTitle>
-                    <DialogDescription>SKU auto-generated from category prefix.</DialogDescription>
+                    <DialogDescription>
+                      SKU auto-generated from category prefix.
+                      {duplicateFrom && <> Prefilled from <span className="font-medium">{duplicateFrom.name}</span>.</>}
+                    </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleCreate} className="space-y-3">
+
+                  <div className="mb-2 rounded-md border border-dashed border-border/60 p-2">
+                    <Label className="text-xs text-muted-foreground">Duplicate from existing item</Label>
+                    <Popover open={dupOpen} onOpenChange={setDupOpen}>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="outline" role="combobox" className="mt-1 w-full justify-between">
+                          <span className="flex items-center gap-2 truncate">
+                            <Copy className="h-3.5 w-3.5" />
+                            {duplicateFrom ? `${duplicateFrom.name} (${duplicateFrom.sku})` : "Search existing item to copy fields…"}
+                          </span>
+                          <Search className="h-3.5 w-3.5 opacity-60" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[420px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search by name, SKU, ref…" />
+                          <CommandList>
+                            <CommandEmpty>No items found.</CommandEmpty>
+                            <CommandGroup>
+                              {items.slice(0, 200).map((it) => (
+                                <CommandItem
+                                  key={it.id}
+                                  value={`${it.name} ${it.sku} ${it.ref_number ?? ""}`}
+                                  onSelect={() => { setDuplicateFrom(it); setDupOpen(false); }}
+                                >
+                                  <div className="flex w-full items-center justify-between gap-2">
+                                    <span className="truncate">{it.name}</span>
+                                    <span className="font-mono text-[10px] text-muted-foreground">{it.sku}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {duplicateFrom && (
+                      <Button type="button" variant="ghost" size="sm" className="mt-1 h-7 text-xs" onClick={() => setDuplicateFrom(null)}>Clear</Button>
+                    )}
+                  </div>
+
+                  <form key={duplicateFrom?.id ?? "new"} onSubmit={handleCreate} className="space-y-3">
                     <div className="space-y-1.5">
                       <Label>Name</Label>
-                      <Input name="name" required maxLength={200} />
+                      <Input name="name" required maxLength={200} defaultValue={duplicateFrom ? `${duplicateFrom.name} (copy)` : ""} />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Category</Label>
-                      <Select name="category_id">
+                      <Select name="category_id" defaultValue={duplicateFrom?.category_id ?? undefined}>
                         <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
                         <SelectContent>
                           {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
@@ -323,51 +407,27 @@ const Items = () => {
                     <div className="grid grid-cols-3 gap-2">
                       <div className="space-y-1.5">
                         <Label>Unit price</Label>
-                        <Input name="unit_price" type="number" step="0.01" defaultValue="0" />
+                        <Input name="unit_price" type="number" step="0.01" defaultValue={duplicateFrom?.unit_price ?? 0} />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Cost</Label>
-                        <Input name="cost_price" type="number" step="0.01" defaultValue="0" />
+                        <Input name="cost_price" type="number" step="0.01" defaultValue={duplicateFrom?.cost_price ?? 0} />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Reorder at</Label>
-                        <Input name="reorder_level" type="number" defaultValue="0" />
+                        <Input name="reorder_level" type="number" defaultValue={duplicateFrom?.reorder_level ?? 0} />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1.5">
-                        <Label>Ref number</Label>
-                        <Input name="ref_number" maxLength={100} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Source</Label>
-                        <Input name="source" maxLength={200} placeholder="Supplier, donation…" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Initial quantity</Label>
-                        <Input name="initial_quantity" type="number" min="0" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>UOM</Label>
-                        <Input name="uom" maxLength={20} placeholder="pcs, kg, box…" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Coding</Label>
-                        <Input name="coding" maxLength={100} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Barcode</Label>
-                        <Input name="barcode" maxLength={100} />
-                      </div>
+                      <div className="space-y-1.5"><Label>Ref number</Label><Input name="ref_number" maxLength={100} defaultValue={duplicateFrom?.ref_number ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>Source</Label><Input name="source" maxLength={200} placeholder="Supplier, donation…" defaultValue={duplicateFrom?.source ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>Initial quantity</Label><Input name="initial_quantity" type="number" min="0" defaultValue={duplicateFrom?.initial_quantity ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>UOM</Label><Input name="uom" maxLength={20} placeholder="pcs, kg, box…" defaultValue={duplicateFrom?.uom ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>Coding</Label><Input name="coding" maxLength={100} defaultValue={duplicateFrom?.coding ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>Barcode</Label><Input name="barcode" maxLength={100} defaultValue={(duplicateFrom as any)?.barcode ?? ""} /></div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Description</Label>
-                      <Textarea name="description" maxLength={1000} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Remarks</Label>
-                      <Textarea name="remarks" maxLength={1000} />
-                    </div>
+                    <div className="space-y-1.5"><Label>Description</Label><Textarea name="description" maxLength={1000} defaultValue={duplicateFrom?.description ?? ""} /></div>
+                    <div className="space-y-1.5"><Label>Remarks</Label><Textarea name="remarks" maxLength={1000} defaultValue={duplicateFrom?.remarks ?? ""} /></div>
                     <DialogFooter>
                       <Button type="submit" disabled={saving}>{saving ? "Creating…" : "Create"}</Button>
                     </DialogFooter>
@@ -495,6 +555,68 @@ const Items = () => {
         </CardContent>
       </Card>
 
+      {/* Batch new items dialog */}
+      <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Batch new items</DialogTitle>
+            <DialogDescription>Create many items in one category at once. SKUs auto-generate.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <Select value={batchCat} onValueChange={setBatchCat}>
+                <SelectTrigger><SelectValue placeholder="Choose category…" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="max-h-[55vh] overflow-y-auto rounded-md border border-border/60">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[26%]">Name *</TableHead>
+                    <TableHead>Ref</TableHead>
+                    <TableHead className="w-[70px]">UOM</TableHead>
+                    <TableHead className="w-[90px]">Unit ₱</TableHead>
+                    <TableHead className="w-[90px]">Cost ₱</TableHead>
+                    <TableHead className="w-[80px]">Init qty</TableHead>
+                    <TableHead className="w-[80px]">Reorder</TableHead>
+                    <TableHead className="w-[40px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {batchRows.map((r, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell><Input value={r.name} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,name:e.target.value}:x))} placeholder="Item name" /></TableCell>
+                      <TableCell><Input value={r.ref_number} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,ref_number:e.target.value}:x))} /></TableCell>
+                      <TableCell><Input value={r.uom} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,uom:e.target.value}:x))} /></TableCell>
+                      <TableCell><Input type="number" step="0.01" value={r.unit_price} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,unit_price:Number(e.target.value)}:x))} /></TableCell>
+                      <TableCell><Input type="number" step="0.01" value={r.cost_price} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,cost_price:Number(e.target.value)}:x))} /></TableCell>
+                      <TableCell><Input type="number" min="0" value={r.initial_quantity} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,initial_quantity:Number(e.target.value)}:x))} /></TableCell>
+                      <TableCell><Input type="number" min="0" value={r.reorder_level} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,reorder_level:Number(e.target.value)}:x))} /></TableCell>
+                      <TableCell>
+                        <Button type="button" size="icon" variant="ghost" disabled={batchRows.length===1} onClick={() => setBatchRows(p => p.filter((_,i)=>i!==idx))}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={() => setBatchRows(p => [...p, { name:"", ref_number:"", uom:"", unit_price:0, cost_price:0, initial_quantity:0, reorder_level:0 }])}>
+              <Plus className="mr-1 h-3.5 w-3.5" />Add row
+            </Button>
+            <p className="text-xs text-muted-foreground">{batchRows.filter(r=>r.name.trim()).length} item(s) ready</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchOpen(false)}>Cancel</Button>
+            <Button onClick={submitBatch} disabled={batchSaving}>{batchSaving ? "Creating…" : "Create all"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
