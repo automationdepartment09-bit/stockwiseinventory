@@ -332,23 +332,72 @@ const Items = () => {
             <Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button>
             <Button variant="outline" onClick={() => openAdd()}><PackagePlus className="mr-2 h-4 w-4" />Add stock</Button>
             {canEdit && (
-              <Dialog open={open} onOpenChange={setOpen}>
+              <Button variant="outline" onClick={() => setBatchOpen(true)}>
+                <Layers className="mr-2 h-4 w-4" />Batch new
+              </Button>
+            )}
+            {canEdit && (
+              <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setDuplicateFrom(null); }}>
                 <DialogTrigger asChild>
                   <Button><Plus className="mr-2 h-4 w-4" />New item</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create item</DialogTitle>
-                    <DialogDescription>SKU auto-generated from category prefix.</DialogDescription>
+                    <DialogDescription>
+                      SKU auto-generated from category prefix.
+                      {duplicateFrom && <> Prefilled from <span className="font-medium">{duplicateFrom.name}</span>.</>}
+                    </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleCreate} className="space-y-3">
+
+                  <div className="mb-2 rounded-md border border-dashed border-border/60 p-2">
+                    <Label className="text-xs text-muted-foreground">Duplicate from existing item</Label>
+                    <Popover open={dupOpen} onOpenChange={setDupOpen}>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="outline" role="combobox" className="mt-1 w-full justify-between">
+                          <span className="flex items-center gap-2 truncate">
+                            <Copy className="h-3.5 w-3.5" />
+                            {duplicateFrom ? `${duplicateFrom.name} (${duplicateFrom.sku})` : "Search existing item to copy fields…"}
+                          </span>
+                          <Search className="h-3.5 w-3.5 opacity-60" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[420px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search by name, SKU, ref…" />
+                          <CommandList>
+                            <CommandEmpty>No items found.</CommandEmpty>
+                            <CommandGroup>
+                              {items.slice(0, 200).map((it) => (
+                                <CommandItem
+                                  key={it.id}
+                                  value={`${it.name} ${it.sku} ${it.ref_number ?? ""}`}
+                                  onSelect={() => { setDuplicateFrom(it); setDupOpen(false); }}
+                                >
+                                  <div className="flex w-full items-center justify-between gap-2">
+                                    <span className="truncate">{it.name}</span>
+                                    <span className="font-mono text-[10px] text-muted-foreground">{it.sku}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {duplicateFrom && (
+                      <Button type="button" variant="ghost" size="sm" className="mt-1 h-7 text-xs" onClick={() => setDuplicateFrom(null)}>Clear</Button>
+                    )}
+                  </div>
+
+                  <form key={duplicateFrom?.id ?? "new"} onSubmit={handleCreate} className="space-y-3">
                     <div className="space-y-1.5">
                       <Label>Name</Label>
-                      <Input name="name" required maxLength={200} />
+                      <Input name="name" required maxLength={200} defaultValue={duplicateFrom ? `${duplicateFrom.name} (copy)` : ""} />
                     </div>
                     <div className="space-y-1.5">
                       <Label>Category</Label>
-                      <Select name="category_id">
+                      <Select name="category_id" defaultValue={duplicateFrom?.category_id ?? undefined}>
                         <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
                         <SelectContent>
                           {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
@@ -358,51 +407,27 @@ const Items = () => {
                     <div className="grid grid-cols-3 gap-2">
                       <div className="space-y-1.5">
                         <Label>Unit price</Label>
-                        <Input name="unit_price" type="number" step="0.01" defaultValue="0" />
+                        <Input name="unit_price" type="number" step="0.01" defaultValue={duplicateFrom?.unit_price ?? 0} />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Cost</Label>
-                        <Input name="cost_price" type="number" step="0.01" defaultValue="0" />
+                        <Input name="cost_price" type="number" step="0.01" defaultValue={duplicateFrom?.cost_price ?? 0} />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Reorder at</Label>
-                        <Input name="reorder_level" type="number" defaultValue="0" />
+                        <Input name="reorder_level" type="number" defaultValue={duplicateFrom?.reorder_level ?? 0} />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1.5">
-                        <Label>Ref number</Label>
-                        <Input name="ref_number" maxLength={100} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Source</Label>
-                        <Input name="source" maxLength={200} placeholder="Supplier, donation…" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Initial quantity</Label>
-                        <Input name="initial_quantity" type="number" min="0" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>UOM</Label>
-                        <Input name="uom" maxLength={20} placeholder="pcs, kg, box…" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Coding</Label>
-                        <Input name="coding" maxLength={100} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Barcode</Label>
-                        <Input name="barcode" maxLength={100} />
-                      </div>
+                      <div className="space-y-1.5"><Label>Ref number</Label><Input name="ref_number" maxLength={100} defaultValue={duplicateFrom?.ref_number ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>Source</Label><Input name="source" maxLength={200} placeholder="Supplier, donation…" defaultValue={duplicateFrom?.source ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>Initial quantity</Label><Input name="initial_quantity" type="number" min="0" defaultValue={duplicateFrom?.initial_quantity ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>UOM</Label><Input name="uom" maxLength={20} placeholder="pcs, kg, box…" defaultValue={duplicateFrom?.uom ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>Coding</Label><Input name="coding" maxLength={100} defaultValue={duplicateFrom?.coding ?? ""} /></div>
+                      <div className="space-y-1.5"><Label>Barcode</Label><Input name="barcode" maxLength={100} defaultValue={(duplicateFrom as any)?.barcode ?? ""} /></div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Description</Label>
-                      <Textarea name="description" maxLength={1000} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Remarks</Label>
-                      <Textarea name="remarks" maxLength={1000} />
-                    </div>
+                    <div className="space-y-1.5"><Label>Description</Label><Textarea name="description" maxLength={1000} defaultValue={duplicateFrom?.description ?? ""} /></div>
+                    <div className="space-y-1.5"><Label>Remarks</Label><Textarea name="remarks" maxLength={1000} defaultValue={duplicateFrom?.remarks ?? ""} /></div>
                     <DialogFooter>
                       <Button type="submit" disabled={saving}>{saving ? "Creating…" : "Create"}</Button>
                     </DialogFooter>
