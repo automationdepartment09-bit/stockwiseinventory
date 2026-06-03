@@ -151,39 +151,70 @@ const Stock = () => {
         )}
       />
       <Card className="glass-card">
-        <CardContent className="p-4">
-          <div className="mb-4">
-            <FilterBar values={filters} onChange={setFilters}
-              searchPlaceholder="Search item name or SKU…"
-              show={{q:true,category:true,warehouse:true,status:true}}
-              categories={categories.map(c=>({value:c.id,label:c.name}))}
-              warehouses={whs.map(w=>({value:w.id,label:w.name}))}
-              statuses={(Object.keys(STATUS_LABEL) as Status[]).map(s=>({value:s,label:STATUS_LABEL[s]}))}
-            />
-          </div>
+        <CardContent className="space-y-3 p-4">
+          <FilterBar values={filters} onChange={setFilters}
+            searchPlaceholder="Search item name or SKU…"
+            show={{q:true,category:true,warehouse:true,status:true}}
+            categories={categories.map(c=>({value:c.id,label:c.name}))}
+            warehouses={whs.map(w=>({value:w.id,label:w.name}))}
+            statuses={(Object.keys(STATUS_LABEL) as Status[]).map(s=>({value:s,label:STATUS_LABEL[s]}))}
+            rightSlot={
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" onClick={() => setAdvOpen(o => !o)}><SlidersHorizontal className="mr-1 h-3.5 w-3.5" />Advanced</Button>
+                <Button size="sm" variant="outline" onClick={() => printRows(Array.from(selected))} disabled={selected.size === 0}>
+                  <Printer className="mr-1 h-3.5 w-3.5" />Print selected ({selected.size})
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => printRows(filtered.map(r => r.id))} disabled={filtered.length === 0}>
+                  <Printer className="mr-1 h-3.5 w-3.5" />Print all
+                </Button>
+              </div>
+            }
+          />
+          {advOpen && (
+            <div className="grid grid-cols-2 gap-3 rounded-md border border-dashed border-border/60 p-3 sm:grid-cols-4">
+              <div className="space-y-1">
+                <Label className="text-xs">Min qty</Label>
+                <Input type="number" value={minQty} onChange={(e) => setMinQty(e.target.value)} placeholder="0" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max qty</Label>
+                <Input type="number" value={maxQty} onChange={(e) => setMaxQty(e.target.value)} placeholder="∞" />
+              </div>
+              <div className="flex items-end">
+                <Button size="sm" variant="ghost" onClick={() => { setMinQty(""); setMaxQty(""); }}>Reset</Button>
+              </div>
+              <div className="ml-auto flex items-end justify-end text-xs text-muted-foreground">{filtered.length} of {rows.length} row(s)</div>
+            </div>
+          )}
           <Table>
             <TableHeader><TableRow>
+              <TableHead className="w-8"><Checkbox checked={filtered.length > 0 && filtered.every(r => selected.has(r.id))} onCheckedChange={(v) => { const n = new Set(selected); filtered.forEach(r => v ? n.add(r.id) : n.delete(r.id)); setSelected(n); }} /></TableHead>
               <TableHead>SKU</TableHead><TableHead>Item</TableHead><TableHead>Warehouse</TableHead>
               <TableHead className="text-right">Qty</TableHead><TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {filtered.map(r=>{ const it = itemMap.get(r.item_id); return (
                 <TableRow key={r.id}>
+                  <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleSel(r.id)} /></TableCell>
                   <TableCell className="font-mono text-xs">{it?.sku??"—"}</TableCell>
                   <TableCell className="font-medium">{it?.name??"Unknown"}</TableCell>
                   <TableCell>{whMap.get(r.warehouse_id)??"—"}</TableCell>
                   <TableCell className="text-right">{r.quantity}</TableCell>
                   <TableCell>
-                    {canEdit?(
+                    {canEditStatus?(
                       <Select value={r.status} onValueChange={v=>updateStatus(r.id,v as Status)}>
                         <SelectTrigger className="h-8 w-[150px]"><SelectValue /></SelectTrigger>
                         <SelectContent>{(Object.keys(STATUS_LABEL) as Status[]).map(s=>(<SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>))}</SelectContent>
                       </Select>
                     ):(<Badge variant="outline" className={statusClass(r.status)}>{STATUS_LABEL[r.status]}</Badge>)}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="ghost" onClick={() => printRows([r.id])} title="Print row"><Printer className="h-3.5 w-3.5" /></Button>
+                  </TableCell>
                 </TableRow>
               );})}
-              {filtered.length===0 && (<TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">No stock rows.</TableCell></TableRow>)}
+              {filtered.length===0 && (<TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No stock rows.</TableCell></TableRow>)}
             </TableBody>
           </Table>
         </CardContent>
