@@ -342,6 +342,7 @@ const Movements = () => {
                 const d = new Date(m.created_at);
                 return (
                   <TableRow key={m.id}>
+                    <TableCell><Checkbox checked={selected.has(m.id)} onCheckedChange={() => toggleSel(m.id)} /></TableCell>
                     <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                       <div>{d.toLocaleDateString()}</div>
                       <div className="tabular-nums">{d.toLocaleTimeString()}</div>
@@ -380,7 +381,7 @@ const Movements = () => {
                   </TableRow>
                 );
               })}
-              {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
+              {filtered.length === 0 && <TableRow><TableCell colSpan={9} className="py-10 text-center text-muted-foreground">No movements match this filter.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
