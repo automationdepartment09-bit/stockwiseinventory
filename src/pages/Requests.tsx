@@ -283,6 +283,7 @@ const Requests = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8"><Checkbox checked={filtered.length > 0 && filtered.every(r => selected.has(r.id))} onCheckedChange={(v) => { const n = new Set(selected); filtered.forEach(r => v ? n.add(r.id) : n.delete(r.id)); setSelected(n); }} /></TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Warehouse</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
@@ -300,6 +301,7 @@ const Requests = () => {
                 const d = new Date(r.created_at);
                 return (
                   <TableRow key={r.id} onClick={() => setDetail(r)} className="cursor-pointer hover:bg-muted/40">
+                    <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleSel(r.id)} /></TableCell>
                     <TableCell className="font-medium">
                       {it?.name ?? "—"}
                       {it && <div className="font-mono text-[10px] text-muted-foreground">{it.sku}</div>}
