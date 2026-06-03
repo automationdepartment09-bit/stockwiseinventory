@@ -213,26 +213,36 @@ const Movements = () => {
 
   const filtered = useMemo(() => {
     return moves.filter((m) => {
-      // status (request lifecycle / manual)
       if (statusFilter !== "all") {
         const s = statusFor(m);
         if (statusFilter === "manual" && s.kind !== "manual") return false;
         if (statusFilter !== "manual" && (s.kind !== "request" || s.status !== statusFilter)) return false;
       }
-      // type
       if (typeFilter !== "all" && m.movement_type !== typeFilter) return false;
-      // date range
       if (!inDateRange(m.created_at, filters.from, filters.to)) return false;
-      // warehouse: from OR to
       if (filters.warehouse !== "all" && m.from_warehouse_id !== filters.warehouse && m.to_warehouse_id !== filters.warehouse) return false;
-      // category
       const it = itemMap.get(m.item_id);
       if (filters.category !== "all" && (it as any)?.category_id !== filters.category) return false;
-      // search
       if (!matchesQuery(filters.q, [it?.name, it?.sku, m.reason, m.reference])) return false;
       return true;
     });
   }, [moves, statusFilter, typeFilter, filters, reqStatusByRefId, itemMap]);
+
+  const printBatch = (ids: string[]) => {
+    const list = filtered.filter(m => ids.includes(m.id));
+    if (list.length === 0) return toast.error("Nothing to print");
+    printList({
+      title: "Stock movements batch",
+      subtitle: `${list.length} movement(s)`,
+      columns: ["When", "Type", "Item", "SKU", "Qty", "From", "To", "Status", "Reason"],
+      rows: list.map(m => {
+        const it = itemMap.get(m.item_id);
+        return [new Date(m.created_at).toLocaleString(), m.movement_type, it?.name ?? "—", it?.sku ?? "—",
+          m.quantity, whMap.get(m.from_warehouse_id ?? "")?.name ?? "—", whMap.get(m.to_warehouse_id ?? "")?.name ?? "—",
+          m.status, m.reason ?? ""];
+      }),
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -315,12 +325,15 @@ const Movements = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                <Button size="sm" variant="outline" onClick={() => printBatch(Array.from(selected))} disabled={selected.size === 0}>
+                  <Printer className="mr-1 h-3.5 w-3.5" />Print selected ({selected.size})
+                </Button>
               </>
             }
           />
           <Table>
             <TableHeader>
-              <TableRow><TableHead>When (date &amp; time)</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
+              <TableRow><TableHead className="w-8"><Checkbox checked={filtered.length > 0 && filtered.every(m => selected.has(m.id))} onCheckedChange={(v) => { const n = new Set(selected); filtered.forEach(m => v ? n.add(m.id) : n.delete(m.id)); setSelected(n); }} /></TableHead><TableHead>When (date &amp; time)</TableHead><TableHead>Type</TableHead><TableHead>Item</TableHead><TableHead>Qty</TableHead><TableHead>From → To</TableHead><TableHead>Status</TableHead><TableHead>Reason</TableHead><TableHead className="text-right">Actions</TableHead></TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((m) => {
