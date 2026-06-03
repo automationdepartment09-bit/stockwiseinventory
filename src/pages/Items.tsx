@@ -352,7 +352,7 @@ const Items = () => {
               </Button>
             )}
             {canEdit && (
-              <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setDuplicateFrom(null); }}>
+              <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setDuplicateFrom(null); setCreateCat(""); setCreateWh(""); } }}>
                 <DialogTrigger asChild>
                   <Button><Plus className="mr-2 h-4 w-4" />New item</Button>
                 </DialogTrigger>
