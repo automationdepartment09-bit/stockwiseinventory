@@ -283,19 +283,31 @@ const Sales = () => {
                 </Dialog>
               )}
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative max-w-sm flex-1 min-w-[220px]">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input value={qSale} onChange={(e) => setQSale(e.target.value)} placeholder="Search invoice, customer, status, notes…" className="pl-8" />
+              </div>
+              <Button size="sm" variant="outline" onClick={printSelected} disabled={selected.size === 0}>
+                <Printer className="mr-1 h-3.5 w-3.5" />Print selected ({selected.size})
+              </Button>
+              <span className="ml-auto text-xs text-muted-foreground">{filteredSales.length} record(s)</span>
+            </div>
             <Table>
               <TableHeader><TableRow>
+                <TableHead className="w-8"><Checkbox checked={filteredSales.length > 0 && filteredSales.every(s => selected.has(s.id))} onCheckedChange={(v) => { const n = new Set(selected); filteredSales.forEach(s => v ? n.add(s.id) : n.delete(s.id)); setSelected(n); }} /></TableHead>
                 <TableHead>Invoice</TableHead><TableHead>Date</TableHead><TableHead>Customer</TableHead>
                 <TableHead>Warehouse</TableHead><TableHead className="text-right">Lines</TableHead>
                 <TableHead className="text-right">Total</TableHead><TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {sales.map(s => {
+                {filteredSales.map(s => {
                   const cust = s.customer_id ? custMap.get(s.customer_id) : null;
                   const lines = lineMap.get(s.id) ?? [];
                   return (
                     <TableRow key={s.id}>
+                      <TableCell><Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggleSel(s.id)} /></TableCell>
                       <TableCell className="font-mono text-xs">{s.invoice_no}</TableCell>
                       <TableCell className="text-xs">{new Date(s.sale_date).toLocaleDateString()}</TableCell>
                       <TableCell>{cust?.name ?? <span className="text-muted-foreground">Walk-in</span>}</TableCell>
@@ -323,7 +335,7 @@ const Sales = () => {
                     </TableRow>
                   );
                 })}
-                {sales.length === 0 && (<TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">No sales yet.</TableCell></TableRow>)}
+                {filteredSales.length === 0 && (<TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">No sales match.</TableCell></TableRow>)}
               </TableBody>
             </Table>
           </CardContent></Card>
