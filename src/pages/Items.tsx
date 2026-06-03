@@ -412,12 +412,36 @@ const Items = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label>Category</Label>
-                      <Select name="category_id" defaultValue={duplicateFrom?.category_id ?? undefined}>
-                        <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
-                        <SelectContent>
-                          {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={catComboOpen} onOpenChange={setCatComboOpen}>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" role="combobox" className="w-full justify-between">
+                            <span className="truncate">
+                              {createCat
+                                ? (() => { const c = categories.find(x => x.id === createCat); return c ? `${c.name} (${c.sku_prefix})` : "Choose…"; })()
+                                : "Search category…"}
+                            </span>
+                            <Search className="h-3.5 w-3.5 opacity-60" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[420px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search categories…" />
+                            <CommandList>
+                              <CommandEmpty>No categories found.</CommandEmpty>
+                              <CommandGroup>
+                                {categories.map((c) => (
+                                  <CommandItem key={c.id} value={`${c.name} ${c.sku_prefix}`} onSelect={() => { setCreateCat(c.id); setCatComboOpen(false); }}>
+                                    <div className="flex w-full items-center justify-between gap-2">
+                                      <span className="truncate">{c.name}</span>
+                                      <span className="font-mono text-[10px] text-muted-foreground">{c.sku_prefix}</span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="space-y-1.5">
@@ -437,6 +461,15 @@ const Items = () => {
                       <div className="space-y-1.5"><Label>Ref number</Label><Input name="ref_number" maxLength={100} defaultValue={duplicateFrom?.ref_number ?? ""} /></div>
                       <div className="space-y-1.5"><Label>Source</Label><Input name="source" maxLength={200} placeholder="Supplier, donation…" defaultValue={duplicateFrom?.source ?? ""} /></div>
                       <div className="space-y-1.5"><Label>Initial quantity</Label><Input name="initial_quantity" type="number" min="0" defaultValue={duplicateFrom?.initial_quantity ?? ""} /></div>
+                      <div className="space-y-1.5">
+                        <Label>Initial warehouse</Label>
+                        <Select value={createWh} onValueChange={setCreateWh}>
+                          <SelectTrigger><SelectValue placeholder="Required if initial qty > 0" /></SelectTrigger>
+                          <SelectContent>
+                            {warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-1.5"><Label>UOM</Label><Input name="uom" maxLength={20} placeholder="pcs, kg, box…" defaultValue={duplicateFrom?.uom ?? ""} /></div>
                       <div className="space-y-1.5"><Label>Coding</Label><Input name="coding" maxLength={100} defaultValue={duplicateFrom?.coding ?? ""} /></div>
                       <div className="space-y-1.5"><Label>Barcode</Label><Input name="barcode" maxLength={100} defaultValue={(duplicateFrom as any)?.barcode ?? ""} /></div>
