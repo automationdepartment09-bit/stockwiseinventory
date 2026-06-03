@@ -362,10 +362,14 @@ const Sales = () => {
                 </Dialog>
               )}
             </div>
+            <div className="relative max-w-sm">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={qCust} onChange={(e) => setQCust(e.target.value)} placeholder="Search name, email, phone, address…" className="pl-8" />
+            </div>
             <Table>
               <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Address</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {customers.map(c => (
+                {filteredCustomers.map(c => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-xs">{c.email ?? "—"}</TableCell>
