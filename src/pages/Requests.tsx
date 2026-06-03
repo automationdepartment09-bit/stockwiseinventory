@@ -359,7 +359,7 @@ const Requests = () => {
                 );
               })}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={10} className="py-10 text-center text-muted-foreground">No requests.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="py-10 text-center text-muted-foreground">No requests.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
