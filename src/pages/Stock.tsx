@@ -10,19 +10,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Printer, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery } from "@/components/FilterBar";
 import { useNavigate } from "react-router-dom";
 import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
+import { printList } from "@/lib/exportPrint";
 
-type Status = "available" | "reserved" | "on_arrival" | "arrived" | "damaged";
-const STATUS_LABEL: Record<Status, string> = { available:"Available", reserved:"Reserved", on_arrival:"On arrival", arrived:"Arrived", damaged:"Damaged" };
+type Status = "available" | "reserved" | "on_arrival" | "arrived" | "damaged" | "partial";
+const STATUS_LABEL: Record<Status, string> = { available:"Available", reserved:"Reserved", on_arrival:"On arrival", arrived:"Arrived", damaged:"Damaged", partial:"Partial" };
 const statusClass = (s: Status) =>
   s==="available"?"bg-primary/15 text-primary border-primary/30"
   :s==="reserved"?"bg-secondary text-secondary-foreground"
   :s==="on_arrival"?"bg-accent text-accent-foreground"
   :s==="arrived"?"bg-primary/10 text-primary border-primary/20"
+  :s==="partial"?"bg-warning/15 text-warning border-warning/30"
   :"bg-destructive/15 text-destructive border-destructive/30";
 
 interface Row { id:string; item_id:string; warehouse_id:string; quantity:number; status:Status }
@@ -31,11 +34,17 @@ const Stock = () => {
   const { user, hasRole } = useAuth();
   const navigate = useNavigate();
   const canEdit = hasRole("admin", "manager");
+  const canEditStatus = hasRole("admin", "manager", "staff");
   const [rows, setRows] = useState<Row[]>([]);
   const [items, setItems] = useState<{id:string;name:string;sku:string;category_id:string|null}[]>([]);
   const [whs, setWhs] = useState<{id:string;name:string}[]>([]);
   const [categories, setCategories] = useState<{id:string;name:string}[]>([]);
   const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
+  const [advOpen, setAdvOpen] = useState(false);
+  const [minQty, setMinQty] = useState<string>("");
+  const [maxQty, setMaxQty] = useState<string>("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id:string) => setSelected(p => { const n = new Set(p); n.has(id)?n.delete(id):n.add(id); return n; });
 
   const [addOpen, setAddOpen] = useState(false);
   const [aWh, setAWh] = useState("");
@@ -63,14 +72,30 @@ const Stock = () => {
     if (filters.status!=="all" && r.status!==filters.status) return false;
     if (filters.warehouse!=="all" && r.warehouse_id!==filters.warehouse) return false;
     if (filters.category!=="all" && (it as any)?.category_id!==filters.category) return false;
+    if (minQty !== "" && r.quantity < Number(minQty)) return false;
+    if (maxQty !== "" && r.quantity > Number(maxQty)) return false;
     return true;
-  }),[rows,itemMap,filters]);
+  }),[rows,itemMap,filters,minQty,maxQty]);
 
   const updateStatus = async (id:string, status:Status) => {
     const { error } = await supabase.from("stock_levels").update({status}).eq("id",id);
     if (error) return toast.error(error.message);
     toast.success("Status updated");
     setRows(p=>p.map(r=>r.id===id?{...r,status}:r));
+  };
+
+  const printRows = (ids: string[]) => {
+    const list = filtered.filter(r => ids.includes(r.id));
+    if (list.length === 0) return toast.error("Nothing to print");
+    printList({
+      title: list.length === 1 ? "Stock row" : "Stock batch",
+      subtitle: `${list.length} row(s)`,
+      columns: ["SKU", "Item", "Warehouse", "Qty", "Status"],
+      rows: list.map(r => {
+        const it = itemMap.get(r.item_id);
+        return [it?.sku ?? "—", it?.name ?? "Unknown", whMap.get(r.warehouse_id) ?? "—", r.quantity, STATUS_LABEL[r.status]];
+      }),
+    });
   };
 
   const submitAdd = async () => {
@@ -126,39 +151,70 @@ const Stock = () => {
         )}
       />
       <Card className="glass-card">
-        <CardContent className="p-4">
-          <div className="mb-4">
-            <FilterBar values={filters} onChange={setFilters}
-              searchPlaceholder="Search item name or SKU…"
-              show={{q:true,category:true,warehouse:true,status:true}}
-              categories={categories.map(c=>({value:c.id,label:c.name}))}
-              warehouses={whs.map(w=>({value:w.id,label:w.name}))}
-              statuses={(Object.keys(STATUS_LABEL) as Status[]).map(s=>({value:s,label:STATUS_LABEL[s]}))}
-            />
-          </div>
+        <CardContent className="space-y-3 p-4">
+          <FilterBar values={filters} onChange={setFilters}
+            searchPlaceholder="Search item name or SKU…"
+            show={{q:true,category:true,warehouse:true,status:true}}
+            categories={categories.map(c=>({value:c.id,label:c.name}))}
+            warehouses={whs.map(w=>({value:w.id,label:w.name}))}
+            statuses={(Object.keys(STATUS_LABEL) as Status[]).map(s=>({value:s,label:STATUS_LABEL[s]}))}
+            rightSlot={
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" onClick={() => setAdvOpen(o => !o)}><SlidersHorizontal className="mr-1 h-3.5 w-3.5" />Advanced</Button>
+                <Button size="sm" variant="outline" onClick={() => printRows(Array.from(selected))} disabled={selected.size === 0}>
+                  <Printer className="mr-1 h-3.5 w-3.5" />Print selected ({selected.size})
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => printRows(filtered.map(r => r.id))} disabled={filtered.length === 0}>
+                  <Printer className="mr-1 h-3.5 w-3.5" />Print all
+                </Button>
+              </div>
+            }
+          />
+          {advOpen && (
+            <div className="grid grid-cols-2 gap-3 rounded-md border border-dashed border-border/60 p-3 sm:grid-cols-4">
+              <div className="space-y-1">
+                <Label className="text-xs">Min qty</Label>
+                <Input type="number" value={minQty} onChange={(e) => setMinQty(e.target.value)} placeholder="0" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Max qty</Label>
+                <Input type="number" value={maxQty} onChange={(e) => setMaxQty(e.target.value)} placeholder="∞" />
+              </div>
+              <div className="flex items-end">
+                <Button size="sm" variant="ghost" onClick={() => { setMinQty(""); setMaxQty(""); }}>Reset</Button>
+              </div>
+              <div className="ml-auto flex items-end justify-end text-xs text-muted-foreground">{filtered.length} of {rows.length} row(s)</div>
+            </div>
+          )}
           <Table>
             <TableHeader><TableRow>
+              <TableHead className="w-8"><Checkbox checked={filtered.length > 0 && filtered.every(r => selected.has(r.id))} onCheckedChange={(v) => { const n = new Set(selected); filtered.forEach(r => v ? n.add(r.id) : n.delete(r.id)); setSelected(n); }} /></TableHead>
               <TableHead>SKU</TableHead><TableHead>Item</TableHead><TableHead>Warehouse</TableHead>
               <TableHead className="text-right">Qty</TableHead><TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {filtered.map(r=>{ const it = itemMap.get(r.item_id); return (
                 <TableRow key={r.id}>
+                  <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleSel(r.id)} /></TableCell>
                   <TableCell className="font-mono text-xs">{it?.sku??"—"}</TableCell>
                   <TableCell className="font-medium">{it?.name??"Unknown"}</TableCell>
                   <TableCell>{whMap.get(r.warehouse_id)??"—"}</TableCell>
                   <TableCell className="text-right">{r.quantity}</TableCell>
                   <TableCell>
-                    {canEdit?(
+                    {canEditStatus?(
                       <Select value={r.status} onValueChange={v=>updateStatus(r.id,v as Status)}>
                         <SelectTrigger className="h-8 w-[150px]"><SelectValue /></SelectTrigger>
                         <SelectContent>{(Object.keys(STATUS_LABEL) as Status[]).map(s=>(<SelectItem key={s} value={s}>{STATUS_LABEL[s]}</SelectItem>))}</SelectContent>
                       </Select>
                     ):(<Badge variant="outline" className={statusClass(r.status)}>{STATUS_LABEL[r.status]}</Badge>)}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="ghost" onClick={() => printRows([r.id])} title="Print row"><Printer className="h-3.5 w-3.5" /></Button>
+                  </TableCell>
                 </TableRow>
               );})}
-              {filtered.length===0 && (<TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">No stock rows.</TableCell></TableRow>)}
+              {filtered.length===0 && (<TableRow><TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No stock rows.</TableCell></TableRow>)}
             </TableBody>
           </Table>
         </CardContent>

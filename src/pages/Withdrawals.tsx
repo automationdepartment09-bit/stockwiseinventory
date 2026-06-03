@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { printList } from "@/lib/exportPrint";
 import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 
 type Status = "pending" | "approved" | "rejected" | "cancelled";
@@ -77,6 +78,8 @@ const Withdrawals = () => {
   const [reviewAction, setReviewAction] = useState<"approve" | "reject">("approve");
   const [reviewNote, setReviewNote] = useState("");
   const [toDelete, setToDelete] = useState<Withdrawal | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   // form state — multi-line items
   const [fLines, setFLines] = useState<LineItem[]>([emptyLine()]);
@@ -290,6 +293,21 @@ const Withdrawals = () => {
     });
   };
 
+  const printBatch = (ids: string[]) => {
+    const list = filtered.filter(r => ids.includes(r.id));
+    if (list.length === 0) return toast.error("Nothing to print");
+    printList({
+      title: "Withdrawals batch",
+      subtitle: `${list.length} withdrawal(s)`,
+      columns: ["Date", "Item", "SKU", "Warehouse", "Qty", "Withdrawn by", "Purpose", "Status"],
+      rows: list.map(r => {
+        const it = itemMap[r.item_id];
+        const wh = whMap[r.warehouse_id];
+        return [r.withdrawal_date, it?.name ?? "—", it?.sku ?? "—", wh?.name ?? "—", r.quantity, byLabel(r), r.purpose, r.status];
+      }),
+    });
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -297,6 +315,9 @@ const Withdrawals = () => {
         description="Track items withdrawn from stock with full audit trail and approval flow."
         actions={
           <>
+            <Button size="sm" variant="outline" onClick={() => printBatch(Array.from(selected))} disabled={selected.size === 0}>
+              <Printer className="mr-1 h-3.5 w-3.5" />Print selected ({selected.size})
+            </Button>
             <Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button>
             {canCreate && (
               <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
@@ -405,6 +426,7 @@ const Withdrawals = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8"><Checkbox checked={filtered.length > 0 && filtered.every(r => selected.has(r.id))} onCheckedChange={(v) => { const n = new Set(selected); filtered.forEach(r => v ? n.add(r.id) : n.delete(r.id)); setSelected(n); }} /></TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>Warehouse</TableHead>
@@ -417,7 +439,7 @@ const Withdrawals = () => {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">No withdrawals.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">No withdrawals.</TableCell></TableRow>
                 )}
                 {filtered.map((r) => {
                   const it = itemMap[r.item_id];
@@ -425,6 +447,7 @@ const Withdrawals = () => {
                   const isOwner = r.requested_by === user?.id;
                   return (
                     <TableRow key={r.id}>
+                      <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleSel(r.id)} /></TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div>{r.withdrawal_date}</div>
                         <div className="text-[10px] tabular-nums text-muted-foreground">submitted {new Date(r.created_at).toLocaleTimeString()} · {new Date(r.created_at).toLocaleDateString()}</div>

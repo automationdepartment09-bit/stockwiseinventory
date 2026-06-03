@@ -11,10 +11,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Printer, Trash2, Receipt, UserPlus, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Printer, Trash2, Receipt, UserPlus, CheckCircle2, XCircle, Search } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ItemPicker } from "@/components/ItemPicker";
 import { printReceipt } from "@/lib/receipt";
+import { printList } from "@/lib/exportPrint";
 
 interface Customer { id: string; name: string; email: string|null; phone: string|null; address: string|null; notes: string|null; is_active: boolean }
 type SaleStatus = "draft" | "confirmed" | "paid" | "cancelled";
@@ -62,6 +64,44 @@ const Sales = () => {
   const [sDiscount, setSDiscount] = useState<number>(0);
   const [sNotes, setSNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [qSale, setQSale] = useState("");
+  const [qCust, setQCust] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSel = (id: string) => setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const filteredSales = useMemo(() => {
+    const s = qSale.trim().toLowerCase();
+    if (!s) return sales;
+    return sales.filter((x) => {
+      const cust = x.customer_id ? custMap.get(x.customer_id) : null;
+      return [x.invoice_no, cust?.name, x.notes, x.status, whMap.get(x.warehouse_id)]
+        .some((v) => (v ?? "").toString().toLowerCase().includes(s));
+    });
+  }, [sales, qSale, custMap, whMap]);
+
+  const filteredCustomers = useMemo(() => {
+    const s = qCust.trim().toLowerCase();
+    if (!s) return customers;
+    return customers.filter((c) => [c.name, c.email, c.phone, c.address].some((v) => (v ?? "").toLowerCase().includes(s)));
+  }, [customers, qCust]);
+
+  const printSelected = () => {
+    const list = sales.filter((s) => selected.has(s.id));
+    if (list.length === 0) return toast.error("Select at least one sale");
+    printList({
+      title: "Sales batch",
+      subtitle: `${list.length} invoice(s)`,
+      columns: ["Invoice", "Date", "Customer", "Warehouse", "Lines", "Total", "Status"],
+      rows: list.map((s) => {
+        const cust = s.customer_id ? custMap.get(s.customer_id) : null;
+        const lines = lineMap.get(s.id) ?? [];
+        return [s.invoice_no, new Date(s.sale_date).toLocaleDateString(), cust?.name ?? "Walk-in",
+          whMap.get(s.warehouse_id) ?? "—", lines.length, `₱${Number(s.total).toFixed(2)}`, s.status];
+      }),
+    });
+  };
+
 
   const load = async () => {
     const [c, s, si, w, it] = await Promise.all([
@@ -243,19 +283,31 @@ const Sales = () => {
                 </Dialog>
               )}
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative max-w-sm flex-1 min-w-[220px]">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input value={qSale} onChange={(e) => setQSale(e.target.value)} placeholder="Search invoice, customer, status, notes…" className="pl-8" />
+              </div>
+              <Button size="sm" variant="outline" onClick={printSelected} disabled={selected.size === 0}>
+                <Printer className="mr-1 h-3.5 w-3.5" />Print selected ({selected.size})
+              </Button>
+              <span className="ml-auto text-xs text-muted-foreground">{filteredSales.length} record(s)</span>
+            </div>
             <Table>
               <TableHeader><TableRow>
+                <TableHead className="w-8"><Checkbox checked={filteredSales.length > 0 && filteredSales.every(s => selected.has(s.id))} onCheckedChange={(v) => { const n = new Set(selected); filteredSales.forEach(s => v ? n.add(s.id) : n.delete(s.id)); setSelected(n); }} /></TableHead>
                 <TableHead>Invoice</TableHead><TableHead>Date</TableHead><TableHead>Customer</TableHead>
                 <TableHead>Warehouse</TableHead><TableHead className="text-right">Lines</TableHead>
                 <TableHead className="text-right">Total</TableHead><TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {sales.map(s => {
+                {filteredSales.map(s => {
                   const cust = s.customer_id ? custMap.get(s.customer_id) : null;
                   const lines = lineMap.get(s.id) ?? [];
                   return (
                     <TableRow key={s.id}>
+                      <TableCell><Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggleSel(s.id)} /></TableCell>
                       <TableCell className="font-mono text-xs">{s.invoice_no}</TableCell>
                       <TableCell className="text-xs">{new Date(s.sale_date).toLocaleDateString()}</TableCell>
                       <TableCell>{cust?.name ?? <span className="text-muted-foreground">Walk-in</span>}</TableCell>
@@ -283,7 +335,7 @@ const Sales = () => {
                     </TableRow>
                   );
                 })}
-                {sales.length === 0 && (<TableRow><TableCell colSpan={8} className="py-8 text-center text-muted-foreground">No sales yet.</TableCell></TableRow>)}
+                {filteredSales.length === 0 && (<TableRow><TableCell colSpan={9} className="py-8 text-center text-muted-foreground">No sales match.</TableCell></TableRow>)}
               </TableBody>
             </Table>
           </CardContent></Card>
@@ -310,10 +362,14 @@ const Sales = () => {
                 </Dialog>
               )}
             </div>
+            <div className="relative max-w-sm">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={qCust} onChange={(e) => setQCust(e.target.value)} placeholder="Search name, email, phone, address…" className="pl-8" />
+            </div>
             <Table>
               <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Phone</TableHead><TableHead>Address</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
               <TableBody>
-                {customers.map(c => (
+                {filteredCustomers.map(c => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-xs">{c.email ?? "—"}</TableCell>
@@ -324,7 +380,7 @@ const Sales = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-                {customers.length === 0 && (<TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No customers yet.</TableCell></TableRow>)}
+                {filteredCustomers.length === 0 && (<TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No customers match.</TableCell></TableRow>)}
               </TableBody>
             </Table>
           </CardContent></Card>

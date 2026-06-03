@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Cat { id: string; name: string; description: string | null; sku_prefix: string; sku_seq: number }
@@ -22,6 +22,14 @@ const Categories = () => {
   const [rows, setRows] = useState<Cat[]>([]);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Cat | null>(null);
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return rows;
+    return rows.filter((c) => [c.name, c.sku_prefix, c.description ?? ""].some((v) => v.toLowerCase().includes(s)));
+  }, [rows, q]);
+
 
   const remove = async () => {
     if (!toDelete) return;
@@ -73,13 +81,17 @@ const Categories = () => {
       />
 
       <Card className="glass-card">
-        <CardContent className="p-4">
+        <CardContent className="space-y-3 p-4">
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, prefix, description…" className="pl-8" />
+          </div>
           <Table>
             <TableHeader>
               <TableRow><TableHead>Name</TableHead><TableHead>Prefix</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Items numbered</TableHead>{canDelete && <TableHead className="w-16" />}</TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((c) => (
+              {filtered.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell><Badge variant="outline" className="font-mono">{c.sku_prefix}</Badge></TableCell>

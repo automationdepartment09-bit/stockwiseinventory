@@ -14,9 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Check, X, Plus, Truck, PackageCheck, PackageOpen, Printer } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { printList } from "@/lib/exportPrint";
 import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 
 type ReqStatus = "pending" | "approved" | "rejected" | "on_arrival" | "arrived" | "received";
@@ -83,6 +85,8 @@ const Requests = () => {
   const [reqProject, setReqProject] = useState<string>("__none__");
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<Req | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const load = async () => {
     const [{ data: rs }, { data: its }, { data: ws }, { data: pj }, { data: pf }, { data: cats }] = await Promise.all([
@@ -226,13 +230,34 @@ const Requests = () => {
     });
   };
 
+  const printBatch = (ids: string[]) => {
+    const list = filtered.filter(r => ids.includes(r.id));
+    if (list.length === 0) return toast.error("Nothing to print");
+    printList({
+      title: "Stock requests batch",
+      subtitle: `${list.length} request(s)`,
+      columns: ["Submitted", "Item", "SKU", "Warehouse", "Qty", "Requested by", "Project", "Status", "Reason"],
+      rows: list.map(r => {
+        const it = items[r.item_id];
+        return [new Date(r.created_at).toLocaleString(), it?.name ?? "—", it?.sku ?? "—",
+          whs[r.warehouse_id] ?? "—", r.quantity, requesterLabel(r.requested_by),
+          projectLabel(r.project_id), STATUS_LABEL[r.status], r.reason ?? ""];
+      }),
+    });
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
         title="Stock requests"
         description="Review and approve incoming stock additions per warehouse."
         actions={
-          <Button onClick={openRequest}><Plus className="mr-2 h-4 w-4" />New request</Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => printBatch(Array.from(selected))} disabled={selected.size === 0}>
+              <Printer className="mr-1 h-3.5 w-3.5" />Print selected ({selected.size})
+            </Button>
+            <Button onClick={openRequest}><Plus className="mr-2 h-4 w-4" />New request</Button>
+          </div>
         }
       />
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
@@ -258,6 +283,7 @@ const Requests = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-8"><Checkbox checked={filtered.length > 0 && filtered.every(r => selected.has(r.id))} onCheckedChange={(v) => { const n = new Set(selected); filtered.forEach(r => v ? n.add(r.id) : n.delete(r.id)); setSelected(n); }} /></TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Warehouse</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
@@ -275,6 +301,7 @@ const Requests = () => {
                 const d = new Date(r.created_at);
                 return (
                   <TableRow key={r.id} onClick={() => setDetail(r)} className="cursor-pointer hover:bg-muted/40">
+                    <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleSel(r.id)} /></TableCell>
                     <TableCell className="font-medium">
                       {it?.name ?? "—"}
                       {it && <div className="font-mono text-[10px] text-muted-foreground">{it.sku}</div>}
@@ -332,7 +359,7 @@ const Requests = () => {
                 );
               })}
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={10} className="py-10 text-center text-muted-foreground">No requests.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={11} className="py-10 text-center text-muted-foreground">No requests.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

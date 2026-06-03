@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -13,7 +13,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface WH { id: string; name: string; code: string; location: string | null; is_active: boolean }
@@ -26,6 +26,14 @@ const Warehouses = () => {
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<WH | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return rows;
+    return rows.filter((w) => [w.name, w.code, w.location ?? ""].some((v) => v.toLowerCase().includes(s)));
+  }, [rows, q]);
+
 
   const load = async () => {
     const { data } = await supabase.from("warehouses").select("*").order("name");
@@ -77,7 +85,11 @@ const Warehouses = () => {
         )}
       />
       <Card className="glass-card">
-        <CardContent className="p-4">
+        <CardContent className="space-y-3 p-4">
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, code, location…" className="pl-8" />
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
@@ -89,7 +101,7 @@ const Warehouses = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((w) => (
+              {filtered.map((w) => (
                 <TableRow key={w.id}>
                   <TableCell className="font-medium">{w.name}</TableCell>
                   <TableCell><Badge variant="outline" className="font-mono">{w.code}</Badge></TableCell>
@@ -104,8 +116,8 @@ const Warehouses = () => {
                   )}
                 </TableRow>
               ))}
-              {rows.length === 0 && (
-                <TableRow><TableCell colSpan={isAdmin ? 5 : 4} className="py-10 text-center text-muted-foreground">No warehouses yet.</TableCell></TableRow>
+              {filtered.length === 0 && (
+                <TableRow><TableCell colSpan={isAdmin ? 5 : 4} className="py-10 text-center text-muted-foreground">No warehouses match.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

@@ -79,6 +79,9 @@ const Items = () => {
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [editing, setEditing] = useState(false);
   const [detail, setDetail] = useState<Item | null>(null);
+  const [createCat, setCreateCat] = useState<string>("");
+  const [catComboOpen, setCatComboOpen] = useState(false);
+  const [createWh, setCreateWh] = useState<string>("");
 
   const confirmDelete = async () => {
     if (!toDelete) return;
@@ -241,28 +244,40 @@ const Items = () => {
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const initialQty = fd.get("initial_quantity") ? Number(fd.get("initial_quantity")) : null;
     const payload = {
       name: String(fd.get("name") ?? "").trim(),
       description: String(fd.get("description") ?? "").trim() || null,
-      category_id: String(fd.get("category_id") ?? "") || null,
+      category_id: createCat || null,
       unit_price: Number(fd.get("unit_price") ?? 0),
       cost_price: Number(fd.get("cost_price") ?? 0),
       reorder_level: Number(fd.get("reorder_level") ?? 0),
       barcode: String(fd.get("barcode") ?? "").trim() || null,
       ref_number: String(fd.get("ref_number") ?? "").trim() || null,
       source: String(fd.get("source") ?? "").trim() || null,
-      initial_quantity: fd.get("initial_quantity") ? Number(fd.get("initial_quantity")) : null,
+      initial_quantity: initialQty,
       uom: String(fd.get("uom") ?? "").trim() || null,
       coding: String(fd.get("coding") ?? "").trim() || null,
       remarks: String(fd.get("remarks") ?? "").trim() || null,
-      created_by: (await supabase.auth.getUser()).data.user?.id,
+      created_by: user?.id,
     };
     if (!payload.name) return toast.error("Name required");
+    if (initialQty && initialQty > 0 && !createWh) return toast.error("Pick a warehouse for the initial quantity");
     setSaving(true);
-    const { error } = await supabase.from("items").insert(payload as any);
+    const { data: created, error } = await supabase.from("items").insert(payload as any).select().single();
+    if (error || !created) { setSaving(false); return toast.error(error?.message ?? "Failed"); }
+    if (initialQty && initialQty > 0 && createWh && user?.id) {
+      const { error: mErr } = await supabase.from("stock_movements").insert({
+        item_id: created.id, movement_type: "in", quantity: initialQty,
+        to_warehouse_id: createWh, reason: "Initial quantity",
+        reference: `ITEM-INIT:${created.id}`, created_by: user.id,
+        status: "approved", reviewed_by: user.id, reviewed_at: new Date().toISOString(),
+      } as any);
+      if (mErr) toast.error(`Item created but initial stock failed: ${mErr.message}`);
+    }
     setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Item created — SKU auto-generated");
+    toast.success(`Item created${initialQty && initialQty > 0 ? ` with ${initialQty} units in stock` : ""} — SKU auto-generated`);
+    setCreateCat(""); setCreateWh("");
     setOpen(false); load();
   };
 
@@ -337,7 +352,7 @@ const Items = () => {
               </Button>
             )}
             {canEdit && (
-              <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setDuplicateFrom(null); }}>
+              <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setDuplicateFrom(null); setCreateCat(""); setCreateWh(""); } }}>
                 <DialogTrigger asChild>
                   <Button><Plus className="mr-2 h-4 w-4" />New item</Button>
                 </DialogTrigger>
@@ -372,7 +387,7 @@ const Items = () => {
                                 <CommandItem
                                   key={it.id}
                                   value={`${it.name} ${it.sku} ${it.ref_number ?? ""}`}
-                                  onSelect={() => { setDuplicateFrom(it); setDupOpen(false); }}
+                                  onSelect={() => { setDuplicateFrom(it); setCreateCat(it.category_id ?? ""); setDupOpen(false); }}
                                 >
                                   <div className="flex w-full items-center justify-between gap-2">
                                     <span className="truncate">{it.name}</span>
@@ -386,7 +401,7 @@ const Items = () => {
                       </PopoverContent>
                     </Popover>
                     {duplicateFrom && (
-                      <Button type="button" variant="ghost" size="sm" className="mt-1 h-7 text-xs" onClick={() => setDuplicateFrom(null)}>Clear</Button>
+                      <Button type="button" variant="ghost" size="sm" className="mt-1 h-7 text-xs" onClick={() => { setDuplicateFrom(null); setCreateCat(""); }}>Clear</Button>
                     )}
                   </div>
 
@@ -397,12 +412,36 @@ const Items = () => {
                     </div>
                     <div className="space-y-1.5">
                       <Label>Category</Label>
-                      <Select name="category_id" defaultValue={duplicateFrom?.category_id ?? undefined}>
-                        <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
-                        <SelectContent>
-                          {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={catComboOpen} onOpenChange={setCatComboOpen}>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" role="combobox" className="w-full justify-between">
+                            <span className="truncate">
+                              {createCat
+                                ? (() => { const c = categories.find(x => x.id === createCat); return c ? `${c.name} (${c.sku_prefix})` : "Choose…"; })()
+                                : "Search category…"}
+                            </span>
+                            <Search className="h-3.5 w-3.5 opacity-60" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[420px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search categories…" />
+                            <CommandList>
+                              <CommandEmpty>No categories found.</CommandEmpty>
+                              <CommandGroup>
+                                {categories.map((c) => (
+                                  <CommandItem key={c.id} value={`${c.name} ${c.sku_prefix}`} onSelect={() => { setCreateCat(c.id); setCatComboOpen(false); }}>
+                                    <div className="flex w-full items-center justify-between gap-2">
+                                      <span className="truncate">{c.name}</span>
+                                      <span className="font-mono text-[10px] text-muted-foreground">{c.sku_prefix}</span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="space-y-1.5">
@@ -422,6 +461,15 @@ const Items = () => {
                       <div className="space-y-1.5"><Label>Ref number</Label><Input name="ref_number" maxLength={100} defaultValue={duplicateFrom?.ref_number ?? ""} /></div>
                       <div className="space-y-1.5"><Label>Source</Label><Input name="source" maxLength={200} placeholder="Supplier, donation…" defaultValue={duplicateFrom?.source ?? ""} /></div>
                       <div className="space-y-1.5"><Label>Initial quantity</Label><Input name="initial_quantity" type="number" min="0" defaultValue={duplicateFrom?.initial_quantity ?? ""} /></div>
+                      <div className="space-y-1.5">
+                        <Label>Initial warehouse</Label>
+                        <Select value={createWh} onValueChange={setCreateWh}>
+                          <SelectTrigger><SelectValue placeholder="Required if initial qty > 0" /></SelectTrigger>
+                          <SelectContent>
+                            {warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-1.5"><Label>UOM</Label><Input name="uom" maxLength={20} placeholder="pcs, kg, box…" defaultValue={duplicateFrom?.uom ?? ""} /></div>
                       <div className="space-y-1.5"><Label>Coding</Label><Input name="coding" maxLength={100} defaultValue={duplicateFrom?.coding ?? ""} /></div>
                       <div className="space-y-1.5"><Label>Barcode</Label><Input name="barcode" maxLength={100} defaultValue={(duplicateFrom as any)?.barcode ?? ""} /></div>
