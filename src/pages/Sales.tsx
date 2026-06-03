@@ -380,7 +380,7 @@ const Sales = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-                {customers.length === 0 && (<TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No customers yet.</TableCell></TableRow>)}
+                {filteredCustomers.length === 0 && (<TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No customers match.</TableCell></TableRow>)}
               </TableBody>
             </Table>
           </CardContent></Card>
