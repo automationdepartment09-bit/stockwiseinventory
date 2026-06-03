@@ -426,6 +426,7 @@ const Withdrawals = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8"><Checkbox checked={filtered.length > 0 && filtered.every(r => selected.has(r.id))} onCheckedChange={(v) => { const n = new Set(selected); filtered.forEach(r => v ? n.add(r.id) : n.delete(r.id)); setSelected(n); }} /></TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>Warehouse</TableHead>
@@ -438,7 +439,7 @@ const Withdrawals = () => {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">No withdrawals.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">No withdrawals.</TableCell></TableRow>
                 )}
                 {filtered.map((r) => {
                   const it = itemMap[r.item_id];
@@ -446,6 +447,7 @@ const Withdrawals = () => {
                   const isOwner = r.requested_by === user?.id;
                   return (
                     <TableRow key={r.id}>
+                      <TableCell><Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleSel(r.id)} /></TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div>{r.withdrawal_date}</div>
                         <div className="text-[10px] tabular-nums text-muted-foreground">submitted {new Date(r.created_at).toLocaleTimeString()} · {new Date(r.created_at).toLocaleDateString()}</div>
