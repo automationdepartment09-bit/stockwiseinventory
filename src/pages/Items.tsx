@@ -387,7 +387,7 @@ const Items = () => {
                                 <CommandItem
                                   key={it.id}
                                   value={`${it.name} ${it.sku} ${it.ref_number ?? ""}`}
-                                  onSelect={() => { setDuplicateFrom(it); setDupOpen(false); }}
+                                  onSelect={() => { setDuplicateFrom(it); setCreateCat(it.category_id ?? ""); setDupOpen(false); }}
                                 >
                                   <div className="flex w-full items-center justify-between gap-2">
                                     <span className="truncate">{it.name}</span>
@@ -401,7 +401,7 @@ const Items = () => {
                       </PopoverContent>
                     </Popover>
                     {duplicateFrom && (
-                      <Button type="button" variant="ghost" size="sm" className="mt-1 h-7 text-xs" onClick={() => setDuplicateFrom(null)}>Clear</Button>
+                      <Button type="button" variant="ghost" size="sm" className="mt-1 h-7 text-xs" onClick={() => { setDuplicateFrom(null); setCreateCat(""); }}>Clear</Button>
                     )}
                   </div>
 
