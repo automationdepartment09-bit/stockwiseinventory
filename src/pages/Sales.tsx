@@ -11,10 +11,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Printer, Trash2, Receipt, UserPlus, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Printer, Trash2, Receipt, UserPlus, CheckCircle2, XCircle, Search } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ItemPicker } from "@/components/ItemPicker";
 import { printReceipt } from "@/lib/receipt";
+import { printList } from "@/lib/exportPrint";
 
 interface Customer { id: string; name: string; email: string|null; phone: string|null; address: string|null; notes: string|null; is_active: boolean }
 type SaleStatus = "draft" | "confirmed" | "paid" | "cancelled";
@@ -62,6 +64,44 @@ const Sales = () => {
   const [sDiscount, setSDiscount] = useState<number>(0);
   const [sNotes, setSNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [qSale, setQSale] = useState("");
+  const [qCust, setQCust] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSel = (id: string) => setSelected((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const filteredSales = useMemo(() => {
+    const s = qSale.trim().toLowerCase();
+    if (!s) return sales;
+    return sales.filter((x) => {
+      const cust = x.customer_id ? custMap.get(x.customer_id) : null;
+      return [x.invoice_no, cust?.name, x.notes, x.status, whMap.get(x.warehouse_id)]
+        .some((v) => (v ?? "").toString().toLowerCase().includes(s));
+    });
+  }, [sales, qSale, custMap, whMap]);
+
+  const filteredCustomers = useMemo(() => {
+    const s = qCust.trim().toLowerCase();
+    if (!s) return customers;
+    return customers.filter((c) => [c.name, c.email, c.phone, c.address].some((v) => (v ?? "").toLowerCase().includes(s)));
+  }, [customers, qCust]);
+
+  const printSelected = () => {
+    const list = sales.filter((s) => selected.has(s.id));
+    if (list.length === 0) return toast.error("Select at least one sale");
+    printList({
+      title: "Sales batch",
+      subtitle: `${list.length} invoice(s)`,
+      columns: ["Invoice", "Date", "Customer", "Warehouse", "Lines", "Total", "Status"],
+      rows: list.map((s) => {
+        const cust = s.customer_id ? custMap.get(s.customer_id) : null;
+        const lines = lineMap.get(s.id) ?? [];
+        return [s.invoice_no, new Date(s.sale_date).toLocaleDateString(), cust?.name ?? "Walk-in",
+          whMap.get(s.warehouse_id) ?? "—", lines.length, `₱${Number(s.total).toFixed(2)}`, s.status];
+      }),
+    });
+  };
+
 
   const load = async () => {
     const [c, s, si, w, it] = await Promise.all([
