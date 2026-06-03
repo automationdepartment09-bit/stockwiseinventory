@@ -79,6 +79,9 @@ const Items = () => {
   const [editItem, setEditItem] = useState<Item | null>(null);
   const [editing, setEditing] = useState(false);
   const [detail, setDetail] = useState<Item | null>(null);
+  const [createCat, setCreateCat] = useState<string>("");
+  const [catComboOpen, setCatComboOpen] = useState(false);
+  const [createWh, setCreateWh] = useState<string>("");
 
   const confirmDelete = async () => {
     if (!toDelete) return;
@@ -241,28 +244,40 @@ const Items = () => {
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const initialQty = fd.get("initial_quantity") ? Number(fd.get("initial_quantity")) : null;
     const payload = {
       name: String(fd.get("name") ?? "").trim(),
       description: String(fd.get("description") ?? "").trim() || null,
-      category_id: String(fd.get("category_id") ?? "") || null,
+      category_id: createCat || null,
       unit_price: Number(fd.get("unit_price") ?? 0),
       cost_price: Number(fd.get("cost_price") ?? 0),
       reorder_level: Number(fd.get("reorder_level") ?? 0),
       barcode: String(fd.get("barcode") ?? "").trim() || null,
       ref_number: String(fd.get("ref_number") ?? "").trim() || null,
       source: String(fd.get("source") ?? "").trim() || null,
-      initial_quantity: fd.get("initial_quantity") ? Number(fd.get("initial_quantity")) : null,
+      initial_quantity: initialQty,
       uom: String(fd.get("uom") ?? "").trim() || null,
       coding: String(fd.get("coding") ?? "").trim() || null,
       remarks: String(fd.get("remarks") ?? "").trim() || null,
-      created_by: (await supabase.auth.getUser()).data.user?.id,
+      created_by: user?.id,
     };
     if (!payload.name) return toast.error("Name required");
+    if (initialQty && initialQty > 0 && !createWh) return toast.error("Pick a warehouse for the initial quantity");
     setSaving(true);
-    const { error } = await supabase.from("items").insert(payload as any);
+    const { data: created, error } = await supabase.from("items").insert(payload as any).select().single();
+    if (error || !created) { setSaving(false); return toast.error(error?.message ?? "Failed"); }
+    if (initialQty && initialQty > 0 && createWh && user?.id) {
+      const { error: mErr } = await supabase.from("stock_movements").insert({
+        item_id: created.id, movement_type: "in", quantity: initialQty,
+        to_warehouse_id: createWh, reason: "Initial quantity",
+        reference: `ITEM-INIT:${created.id}`, created_by: user.id,
+        status: "approved", reviewed_by: user.id, reviewed_at: new Date().toISOString(),
+      } as any);
+      if (mErr) toast.error(`Item created but initial stock failed: ${mErr.message}`);
+    }
     setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Item created — SKU auto-generated");
+    toast.success(`Item created${initialQty && initialQty > 0 ? ` with ${initialQty} units in stock` : ""} — SKU auto-generated`);
+    setCreateCat(""); setCreateWh("");
     setOpen(false); load();
   };
 
