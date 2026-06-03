@@ -34,11 +34,17 @@ const Stock = () => {
   const { user, hasRole } = useAuth();
   const navigate = useNavigate();
   const canEdit = hasRole("admin", "manager");
+  const canEditStatus = hasRole("admin", "manager", "staff");
   const [rows, setRows] = useState<Row[]>([]);
   const [items, setItems] = useState<{id:string;name:string;sku:string;category_id:string|null}[]>([]);
   const [whs, setWhs] = useState<{id:string;name:string}[]>([]);
   const [categories, setCategories] = useState<{id:string;name:string}[]>([]);
   const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
+  const [advOpen, setAdvOpen] = useState(false);
+  const [minQty, setMinQty] = useState<string>("");
+  const [maxQty, setMaxQty] = useState<string>("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id:string) => setSelected(p => { const n = new Set(p); n.has(id)?n.delete(id):n.add(id); return n; });
 
   const [addOpen, setAddOpen] = useState(false);
   const [aWh, setAWh] = useState("");
@@ -66,14 +72,30 @@ const Stock = () => {
     if (filters.status!=="all" && r.status!==filters.status) return false;
     if (filters.warehouse!=="all" && r.warehouse_id!==filters.warehouse) return false;
     if (filters.category!=="all" && (it as any)?.category_id!==filters.category) return false;
+    if (minQty !== "" && r.quantity < Number(minQty)) return false;
+    if (maxQty !== "" && r.quantity > Number(maxQty)) return false;
     return true;
-  }),[rows,itemMap,filters]);
+  }),[rows,itemMap,filters,minQty,maxQty]);
 
   const updateStatus = async (id:string, status:Status) => {
     const { error } = await supabase.from("stock_levels").update({status}).eq("id",id);
     if (error) return toast.error(error.message);
     toast.success("Status updated");
     setRows(p=>p.map(r=>r.id===id?{...r,status}:r));
+  };
+
+  const printRows = (ids: string[]) => {
+    const list = filtered.filter(r => ids.includes(r.id));
+    if (list.length === 0) return toast.error("Nothing to print");
+    printList({
+      title: list.length === 1 ? "Stock row" : "Stock batch",
+      subtitle: `${list.length} row(s)`,
+      columns: ["SKU", "Item", "Warehouse", "Qty", "Status"],
+      rows: list.map(r => {
+        const it = itemMap.get(r.item_id);
+        return [it?.sku ?? "—", it?.name ?? "Unknown", whMap.get(r.warehouse_id) ?? "—", r.quantity, STATUS_LABEL[r.status]];
+      }),
+    });
   };
 
   const submitAdd = async () => {
