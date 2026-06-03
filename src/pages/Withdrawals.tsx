@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { ItemPicker } from "@/components/ItemPicker";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery, inDateRange } from "@/components/FilterBar";
 import { printReceipt, receiptNo } from "@/lib/receipt";
+import { printList } from "@/lib/exportPrint";
 import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
 
 type Status = "pending" | "approved" | "rejected" | "cancelled";
@@ -77,6 +78,8 @@ const Withdrawals = () => {
   const [reviewAction, setReviewAction] = useState<"approve" | "reject">("approve");
   const [reviewNote, setReviewNote] = useState("");
   const [toDelete, setToDelete] = useState<Withdrawal | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) => setSelected(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   // form state — multi-line items
   const [fLines, setFLines] = useState<LineItem[]>([emptyLine()]);
@@ -290,6 +293,21 @@ const Withdrawals = () => {
     });
   };
 
+  const printBatch = (ids: string[]) => {
+    const list = filtered.filter(r => ids.includes(r.id));
+    if (list.length === 0) return toast.error("Nothing to print");
+    printList({
+      title: "Withdrawals batch",
+      subtitle: `${list.length} withdrawal(s)`,
+      columns: ["Date", "Item", "SKU", "Warehouse", "Qty", "Withdrawn by", "Purpose", "Status"],
+      rows: list.map(r => {
+        const it = itemMap[r.item_id];
+        const wh = whMap[r.warehouse_id];
+        return [r.withdrawal_date, it?.name ?? "—", it?.sku ?? "—", wh?.name ?? "—", r.quantity, byLabel(r), r.purpose, r.status];
+      }),
+    });
+  };
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -297,6 +315,9 @@ const Withdrawals = () => {
         description="Track items withdrawn from stock with full audit trail and approval flow."
         actions={
           <>
+            <Button size="sm" variant="outline" onClick={() => printBatch(Array.from(selected))} disabled={selected.size === 0}>
+              <Printer className="mr-1 h-3.5 w-3.5" />Print selected ({selected.size})
+            </Button>
             <Button variant="outline" onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Export</Button>
             {canCreate && (
               <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
