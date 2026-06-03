@@ -10,19 +10,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Printer, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { FilterBar, FilterValues, EMPTY_FILTERS, matchesQuery } from "@/components/FilterBar";
 import { useNavigate } from "react-router-dom";
 import { MultiLineItems, LineItem, emptyLine, newBatchRef } from "@/components/MultiLineItems";
+import { printList } from "@/lib/exportPrint";
 
-type Status = "available" | "reserved" | "on_arrival" | "arrived" | "damaged";
-const STATUS_LABEL: Record<Status, string> = { available:"Available", reserved:"Reserved", on_arrival:"On arrival", arrived:"Arrived", damaged:"Damaged" };
+type Status = "available" | "reserved" | "on_arrival" | "arrived" | "damaged" | "partial";
+const STATUS_LABEL: Record<Status, string> = { available:"Available", reserved:"Reserved", on_arrival:"On arrival", arrived:"Arrived", damaged:"Damaged", partial:"Partial" };
 const statusClass = (s: Status) =>
   s==="available"?"bg-primary/15 text-primary border-primary/30"
   :s==="reserved"?"bg-secondary text-secondary-foreground"
   :s==="on_arrival"?"bg-accent text-accent-foreground"
   :s==="arrived"?"bg-primary/10 text-primary border-primary/20"
+  :s==="partial"?"bg-warning/15 text-warning border-warning/30"
   :"bg-destructive/15 text-destructive border-destructive/30";
 
 interface Row { id:string; item_id:string; warehouse_id:string; quantity:number; status:Status }
