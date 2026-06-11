@@ -328,25 +328,58 @@ const Items = () => {
   const submitBatch = async () => {
     const valid = batchRows.filter((r) => r.name.trim());
     if (valid.length === 0) return toast.error("Add at least one item with a name");
+    for (const r of valid) {
+      const qty = Number(r.initial_quantity) || 0;
+      if (qty > 0 && !(r.warehouse_id || batchDefaultWh)) {
+        return toast.error(`Row "${r.name}" has initial qty but no warehouse`);
+      }
+    }
     setBatchSaving(true);
     const payload = valid.map((r) => ({
       name: r.name.trim(),
-      category_id: batchCat || null,
+      category_id: (r.category_id || batchDefaultCat) || null,
+      description: r.description.trim() || null,
       ref_number: r.ref_number.trim() || null,
+      coding: r.coding.trim() || null,
+      barcode: r.barcode.trim() || null,
       uom: r.uom.trim() || null,
+      source: r.source.trim() || null,
       unit_price: Number(r.unit_price) || 0,
       cost_price: Number(r.cost_price) || 0,
       initial_quantity: Number(r.initial_quantity) || null,
       reorder_level: Number(r.reorder_level) || 0,
+      remarks: r.remarks.trim() || null,
       created_by: user?.id,
     }));
-    const { error } = await supabase.from("items").insert(payload as any);
+    const { data: created, error } = await supabase.from("items").insert(payload as any).select();
+    if (error || !created) { setBatchSaving(false); return toast.error(error?.message ?? "Failed"); }
+    const movements = created
+      .map((it: any, i: number) => {
+        const row = valid[i];
+        const qty = Number(row.initial_quantity) || 0;
+        const wh = row.warehouse_id || batchDefaultWh;
+        if (qty > 0 && wh && user?.id) {
+          return {
+            item_id: it.id, movement_type: "in", quantity: qty,
+            to_warehouse_id: wh, reason: "Initial quantity",
+            reference: `ITEM-INIT:${it.id}`, created_by: user.id,
+            status: "approved", reviewed_by: user.id, reviewed_at: new Date().toISOString(),
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+    if (movements.length > 0) {
+      const { error: mErr } = await supabase.from("stock_movements").insert(movements as any);
+      if (mErr) toast.error(`Items created but initial stock failed: ${mErr.message}`);
+    }
     setBatchSaving(false);
-    if (error) return toast.error(error.message);
     toast.success(`Created ${valid.length} item(s)`);
     setBatchOpen(false);
-    setBatchRows([{ name: "", ref_number: "", uom: "", unit_price: 0, cost_price: 0, initial_quantity: 0, reorder_level: 0 }]);
-    setBatchCat("");
+    setBatchRows([{ name: "", category_id: "", ref_number: "", coding: "", barcode: "", uom: "", source: "",
+      unit_price: 0, cost_price: 0, initial_quantity: 0, warehouse_id: "", reorder_level: 0,
+      description: "", remarks: "" }]);
+    setBatchDefaultCat(""); setBatchDefaultWh("");
     load();
   };
 
