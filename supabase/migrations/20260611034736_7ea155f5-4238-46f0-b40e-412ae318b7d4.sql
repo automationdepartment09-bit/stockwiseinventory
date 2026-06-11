@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS trg_apply_movement ON public.stock_movements;
