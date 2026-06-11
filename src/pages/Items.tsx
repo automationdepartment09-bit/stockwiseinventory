@@ -64,9 +64,24 @@ const Items = () => {
   const [duplicateFrom, setDuplicateFrom] = useState<Item | null>(null);
   const [dupOpen, setDupOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
-  const [batchCat, setBatchCat] = useState<string>("");
-  const [batchRows, setBatchRows] = useState<Array<{ name: string; ref_number: string; uom: string; unit_price: number; cost_price: number; initial_quantity: number; reorder_level: number }>>([
-    { name: "", ref_number: "", uom: "", unit_price: 0, cost_price: 0, initial_quantity: 0, reorder_level: 0 },
+  const [batchDefaultCat, setBatchDefaultCat] = useState<string>("");
+  const [batchDefaultWh, setBatchDefaultWh] = useState<string>("");
+  type BatchRow = {
+    name: string; category_id: string; ref_number: string; coding: string; barcode: string;
+    uom: string; source: string; unit_price: number; cost_price: number;
+    initial_quantity: number; warehouse_id: string; reorder_level: number;
+    description: string; remarks: string;
+  };
+  const emptyBatchRow = (): BatchRow => ({
+    name: "", category_id: batchDefaultCat, ref_number: "", coding: "", barcode: "",
+    uom: "", source: "", unit_price: 0, cost_price: 0,
+    initial_quantity: 0, warehouse_id: batchDefaultWh, reorder_level: 0,
+    description: "", remarks: "",
+  });
+  const [batchRows, setBatchRows] = useState<BatchRow[]>([
+    { name: "", category_id: "", ref_number: "", coding: "", barcode: "", uom: "", source: "",
+      unit_price: 0, cost_price: 0, initial_quantity: 0, warehouse_id: "", reorder_level: 0,
+      description: "", remarks: "" },
   ]);
   const [batchSaving, setBatchSaving] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
