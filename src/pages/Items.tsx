@@ -653,59 +653,113 @@ const Items = () => {
 
       {/* Batch new items dialog */}
       <Dialog open={batchOpen} onOpenChange={setBatchOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Batch new items</DialogTitle>
-            <DialogDescription>Create many items in one category at once. SKUs auto-generate.</DialogDescription>
+            <DialogDescription>
+              Each row can have its own category and full details. SKUs auto-generate per row's category.
+              Defaults below pre-fill new rows.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Category</Label>
-              <Select value={batchCat} onValueChange={setBatchCat}>
-                <SelectTrigger><SelectValue placeholder="Choose category…" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col gap-3 overflow-hidden">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Default category (pre-fills new rows)</Label>
+                <Select value={batchDefaultCat} onValueChange={setBatchDefaultCat}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Default warehouse (for initial qty)</Label>
+                <Select value={batchDefaultWh} onValueChange={setBatchDefaultWh}>
+                  <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                  <SelectContent>
+                    {warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="max-h-[55vh] overflow-y-auto rounded-md border border-border/60">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[26%]">Name *</TableHead>
-                    <TableHead>Ref</TableHead>
-                    <TableHead className="w-[70px]">UOM</TableHead>
-                    <TableHead className="w-[90px]">Unit ₱</TableHead>
-                    <TableHead className="w-[90px]">Cost ₱</TableHead>
-                    <TableHead className="w-[80px]">Init qty</TableHead>
-                    <TableHead className="w-[80px]">Reorder</TableHead>
-                    <TableHead className="w-[40px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {batchRows.map((r, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell><Input value={r.name} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,name:e.target.value}:x))} placeholder="Item name" /></TableCell>
-                      <TableCell><Input value={r.ref_number} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,ref_number:e.target.value}:x))} /></TableCell>
-                      <TableCell><Input value={r.uom} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,uom:e.target.value}:x))} /></TableCell>
-                      <TableCell><Input type="number" step="0.01" value={r.unit_price} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,unit_price:Number(e.target.value)}:x))} /></TableCell>
-                      <TableCell><Input type="number" step="0.01" value={r.cost_price} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,cost_price:Number(e.target.value)}:x))} /></TableCell>
-                      <TableCell><Input type="number" min="0" value={r.initial_quantity} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,initial_quantity:Number(e.target.value)}:x))} /></TableCell>
-                      <TableCell><Input type="number" min="0" value={r.reorder_level} onChange={(e) => setBatchRows(p => p.map((x,i) => i===idx?{...x,reorder_level:Number(e.target.value)}:x))} /></TableCell>
-                      <TableCell>
-                        <Button type="button" size="icon" variant="ghost" disabled={batchRows.length===1} onClick={() => setBatchRows(p => p.filter((_,i)=>i!==idx))}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+
+            <div className="space-y-3 overflow-y-auto pr-1" style={{ maxHeight: "55vh" }}>
+              {batchRows.map((r, idx) => {
+                const upd = (patch: Partial<BatchRow>) =>
+                  setBatchRows((p) => p.map((x, i) => (i === idx ? { ...x, ...patch } : x)));
+                return (
+                  <div key={idx} className="rounded-md border border-border/60 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Item #{idx + 1}</span>
+                      <Button type="button" size="icon" variant="ghost" disabled={batchRows.length === 1}
+                        onClick={() => setBatchRows((p) => p.filter((_, i) => i !== idx))}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <div className="sm:col-span-2 space-y-1">
+                        <Label className="text-xs">Name *</Label>
+                        <Input value={r.name} onChange={(e) => upd({ name: e.target.value })} placeholder="Item name" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Category</Label>
+                        <Select value={r.category_id || batchDefaultCat} onValueChange={(v) => upd({ category_id: v })}>
+                          <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
+                          <SelectContent>
+                            {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.sku_prefix})</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className="space-y-1"><Label className="text-xs">Ref number</Label>
+                        <Input value={r.ref_number} onChange={(e) => upd({ ref_number: e.target.value })} /></div>
+                      <div className="space-y-1"><Label className="text-xs">Coding</Label>
+                        <Input value={r.coding} onChange={(e) => upd({ coding: e.target.value })} /></div>
+                      <div className="space-y-1"><Label className="text-xs">Barcode</Label>
+                        <Input value={r.barcode} onChange={(e) => upd({ barcode: e.target.value })} /></div>
+                      <div className="space-y-1"><Label className="text-xs">UOM</Label>
+                        <Input value={r.uom} onChange={(e) => upd({ uom: e.target.value })} placeholder="pcs, box…" /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className="space-y-1"><Label className="text-xs">Source</Label>
+                        <Input value={r.source} onChange={(e) => upd({ source: e.target.value })} placeholder="Supplier" /></div>
+                      <div className="space-y-1"><Label className="text-xs">Unit price ₱</Label>
+                        <Input type="number" step="0.01" value={r.unit_price} onChange={(e) => upd({ unit_price: Number(e.target.value) })} /></div>
+                      <div className="space-y-1"><Label className="text-xs">Cost price ₱</Label>
+                        <Input type="number" step="0.01" value={r.cost_price} onChange={(e) => upd({ cost_price: Number(e.target.value) })} /></div>
+                      <div className="space-y-1"><Label className="text-xs">Reorder level</Label>
+                        <Input type="number" min="0" value={r.reorder_level} onChange={(e) => upd({ reorder_level: Number(e.target.value) })} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1"><Label className="text-xs">Initial quantity</Label>
+                        <Input type="number" min="0" value={r.initial_quantity} onChange={(e) => upd({ initial_quantity: Number(e.target.value) })} /></div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Initial warehouse</Label>
+                        <Select value={r.warehouse_id || batchDefaultWh} onValueChange={(v) => upd({ warehouse_id: v })}>
+                          <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
+                          <SelectContent>
+                            {warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <div className="space-y-1"><Label className="text-xs">Description</Label>
+                        <Textarea rows={2} value={r.description} onChange={(e) => upd({ description: e.target.value })} /></div>
+                      <div className="space-y-1"><Label className="text-xs">Remarks</Label>
+                        <Textarea rows={2} value={r.remarks} onChange={(e) => upd({ remarks: e.target.value })} /></div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <Button type="button" size="sm" variant="outline" onClick={() => setBatchRows(p => [...p, { name:"", ref_number:"", uom:"", unit_price:0, cost_price:0, initial_quantity:0, reorder_level:0 }])}>
-              <Plus className="mr-1 h-3.5 w-3.5" />Add row
-            </Button>
-            <p className="text-xs text-muted-foreground">{batchRows.filter(r=>r.name.trim()).length} item(s) ready</p>
+            <div className="flex items-center justify-between">
+              <Button type="button" size="sm" variant="outline" onClick={() => setBatchRows((p) => [...p, emptyBatchRow()])}>
+                <Plus className="mr-1 h-3.5 w-3.5" />Add row
+              </Button>
+              <p className="text-xs text-muted-foreground">{batchRows.filter((r) => r.name.trim()).length} item(s) ready</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBatchOpen(false)}>Cancel</Button>
