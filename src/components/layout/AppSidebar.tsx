@@ -26,6 +26,8 @@ const mainItems = [
   { title: "Withdrawals", url: "/withdrawals", icon: PackageMinus },
   { title: "Returns", url: "/returns", icon: Undo2 },
   { title: "Sales", url: "/sales", icon: Receipt },
+  { title: "Catalogue", url: "/catalogue", icon: BookOpen },
+  { title: "Quotations", url: "/quotations", icon: FileText },
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Chat", url: "/chat", icon: MessageSquare },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
