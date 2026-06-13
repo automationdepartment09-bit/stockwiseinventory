@@ -22,6 +22,8 @@ import Chat from "./pages/Chat";
 import Withdrawals from "./pages/Withdrawals";
 import Returns from "./pages/Returns";
 import Sales from "./pages/Sales";
+import Catalogue from "./pages/Catalogue";
+import Quotations from "./pages/Quotations";
 import Projects from "./pages/Projects";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
@@ -56,6 +58,8 @@ const App = () => (
               <Route path="/withdrawals" element={<Withdrawals />} />
               <Route path="/returns" element={<Returns />} />
               <Route path="/sales" element={<Sales />} />
+              <Route path="/catalogue" element={<Catalogue />} />
+              <Route path="/quotations" element={<Quotations />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/history" element={<History />} />
               <Route path="/profile" element={<Profile />} />

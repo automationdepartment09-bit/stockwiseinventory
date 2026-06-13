@@ -44,6 +44,78 @@ export type Database = {
         }
         Relationships: []
       }
+      catalogue_items: {
+        Row: {
+          category_id: string | null
+          cost_price: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_visible: boolean
+          item_id: string | null
+          name: string
+          remarks: string | null
+          sku: string | null
+          unit_price: number
+          uom: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          cost_price?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_visible?: boolean
+          item_id?: string | null
+          name: string
+          remarks?: string | null
+          sku?: string | null
+          unit_price?: number
+          uom?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          cost_price?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_visible?: boolean
+          item_id?: string | null
+          name?: string
+          remarks?: string | null
+          sku?: string | null
+          unit_price?: number
+          uom?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalogue_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "catalogue_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -353,6 +425,144 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      quotation_items: {
+        Row: {
+          catalogue_item_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          item_id: string | null
+          line_total: number
+          name: string
+          quantity: number
+          quotation_id: string
+          sort_order: number
+          unit_price: number
+        }
+        Insert: {
+          catalogue_item_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_id?: string | null
+          line_total?: number
+          name: string
+          quantity?: number
+          quotation_id: string
+          sort_order?: number
+          unit_price?: number
+        }
+        Update: {
+          catalogue_item_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_id?: string | null
+          line_total?: number
+          name?: string
+          quantity?: number
+          quotation_id?: string
+          sort_order?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_items_catalogue_item_id_fkey"
+            columns: ["catalogue_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalogue_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_items_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          discount: number
+          id: string
+          issue_date: string
+          notes: string | null
+          quote_no: string
+          status: string
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          terms: string | null
+          total: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          discount?: number
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          quote_no?: string
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          discount?: number
+          id?: string
+          issue_date?: string
+          notes?: string | null
+          quote_no?: string
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       returns: {
         Row: {

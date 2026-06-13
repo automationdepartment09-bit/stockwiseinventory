@@ -1,4 +1,4 @@
-import { Boxes, LayoutDashboard, Package, Tag, Warehouse, ArrowLeftRight, BarChart3, Users, ShieldCheck, ScrollText, Bell, Settings, ClipboardCheck, Layers, MessageSquare, PackageMinus, FolderKanban, History, Undo2, Receipt } from "lucide-react";
+import { Boxes, LayoutDashboard, Package, Tag, Warehouse, ArrowLeftRight, BarChart3, Users, ShieldCheck, ScrollText, Bell, Settings, ClipboardCheck, Layers, MessageSquare, PackageMinus, FolderKanban, History, Undo2, Receipt, BookOpen, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -26,6 +26,8 @@ const mainItems = [
   { title: "Withdrawals", url: "/withdrawals", icon: PackageMinus },
   { title: "Returns", url: "/returns", icon: Undo2 },
   { title: "Sales", url: "/sales", icon: Receipt },
+  { title: "Catalogue", url: "/catalogue", icon: BookOpen },
+  { title: "Quotations", url: "/quotations", icon: FileText },
   { title: "Projects", url: "/projects", icon: FolderKanban },
   { title: "Chat", url: "/chat", icon: MessageSquare },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
