@@ -363,11 +363,11 @@ const Quotations = () => {
                           <Button type="button" size="icon" variant="ghost" onClick={() => removeLine(i)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                         <div className="grid grid-cols-12 gap-2">
-                          <div className="col-span-6"><Label className="text-xs">Name</Label><Input value={l.name} onChange={e => updateLine(i, { name: e.target.value })} /></div>
-                          <div className="col-span-2"><Label className="text-xs">Qty</Label><Input type="number" step="0.01" value={l.quantity} onChange={e => updateLine(i, { quantity: Number(e.target.value) })} /></div>
+                          <div className="col-span-4"><Label className="text-xs">Name</Label><Input value={l.name} onChange={e => updateLine(i, { name: e.target.value })} /></div>
+                          <div className="col-span-1"><Label className="text-xs">Qty</Label><Input type="number" step="0.01" value={l.quantity} onChange={e => updateLine(i, { quantity: Number(e.target.value) })} /></div>
                           <div className="col-span-2"><Label className="text-xs">Unit price</Label><Input type="number" step="0.01" value={l.unit_price} onChange={e => updateLine(i, { unit_price: Number(e.target.value) })} /></div>
                           <div className="col-span-2"><Label className="text-xs">Total</Label><Input value={formatPHP((Number(l.quantity) || 0) * (Number(l.unit_price) || 0))} readOnly /></div>
-                          <div className="col-span-12"><Label className="text-xs">Description</Label><Textarea rows={1} value={l.description ?? ""} onChange={e => updateLine(i, { description: e.target.value })} /></div>
+                          <div className="col-span-3"><Label className="text-xs">Description</Label><Textarea rows={1} value={l.description ?? ""} onChange={e => updateLine(i, { description: e.target.value })} /></div>
                         </div>
                       </CardContent></Card>
                     ))}
@@ -380,22 +380,31 @@ const Quotations = () => {
                       <ItemSearchPanel
                         cats={cats}
                         invs={invs}
-                        onAddCatalogue={(c) => setLines(ls => [...ls, {
-                          source: "catalogue", catalogue_item_id: c.id, item_id: null,
-                          name: c.name, description: c.description,
-                          quantity: 1, unit_price: Number(c.unit_price) || 0,
-                          line_total: Number(c.unit_price) || 0, sort_order: ls.length,
-                        }])}
-                        onAddInventory={(it) => setLines(ls => [...ls, {
-                          source: "inventory", catalogue_item_id: null, item_id: it.id,
-                          name: it.name, description: null,
-                          quantity: 1, unit_price: Number(it.unit_price) || 0,
-                          line_total: Number(it.unit_price) || 0, sort_order: ls.length,
-                        }])}
+                        onAddCatalogue={(c) => setLines(ls => {
+                          const idx = ls.findIndex(x => x.source === "catalogue" && x.catalogue_item_id === c.id);
+                          if (idx >= 0) return ls.map((x, k) => k === idx ? { ...x, quantity: (Number(x.quantity) || 0) + 1 } : x);
+                          return [...ls, {
+                            source: "catalogue", catalogue_item_id: c.id, item_id: null,
+                            name: c.name, description: c.description,
+                            quantity: 1, unit_price: Number(c.unit_price) || 0,
+                            line_total: Number(c.unit_price) || 0, sort_order: ls.length,
+                          }];
+                        })}
+                        onAddInventory={(it) => setLines(ls => {
+                          const idx = ls.findIndex(x => x.source === "inventory" && x.item_id === it.id);
+                          if (idx >= 0) return ls.map((x, k) => k === idx ? { ...x, quantity: (Number(x.quantity) || 0) + 1 } : x);
+                          return [...ls, {
+                            source: "inventory", catalogue_item_id: null, item_id: it.id,
+                            name: it.name, description: null,
+                            quantity: 1, unit_price: Number(it.unit_price) || 0,
+                            line_total: Number(it.unit_price) || 0, sort_order: ls.length,
+                          }];
+                        })}
                         onAddCustom={() => setLines(ls => [...ls, emptyLine(ls.length)])}
                       />
                     </CardContent></Card>
                   </div>
+
                 </div>
 
 
