@@ -305,7 +305,7 @@ const Quotations = () => {
         {canManage && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button onClick={openNew}><Plus className="h-4 w-4 mr-1" />New quote</Button></DialogTrigger>
-            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-[1400px] w-[95vw] max-h-[92vh] overflow-y-auto">
               <DialogHeader><DialogTitle>{editId ? "Edit quotation" : "New quotation"}</DialogTitle></DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -340,9 +340,9 @@ const Quotations = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
                   {/* LEFT: Added items list */}
-                  <div className="lg:col-span-2 space-y-2">
+                  <div className="xl:col-span-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <Label>Line items ({lines.filter(l => l.name.trim()).length})</Label>
                       <Button type="button" size="sm" variant="outline" onClick={addLine}><Plus className="h-3.5 w-3.5 mr-1" />Blank row</Button>
@@ -374,8 +374,8 @@ const Quotations = () => {
                   </div>
 
                   {/* RIGHT: Search panel */}
-                  <div className="lg:col-span-1">
-                    <Card className="lg:sticky lg:top-2"><CardContent className="p-3 space-y-2">
+                  <div className="xl:col-span-1">
+                    <Card className="xl:sticky xl:top-2"><CardContent className="p-3 space-y-2">
                       <Label>Add item</Label>
                       <ItemSearchPanel
                         cats={cats}
