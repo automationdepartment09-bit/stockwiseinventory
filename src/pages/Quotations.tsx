@@ -340,43 +340,28 @@ const Quotations = () => {
                   </div>
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label>Line items</Label>
-                    <Button type="button" size="sm" variant="outline" onClick={addLine}><Plus className="h-3.5 w-3.5 mr-1" />Add line</Button>
-                  </div>
-                  <div className="space-y-2">
-                    {lines.map((l, i) => (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  {/* LEFT: Added items list */}
+                  <div className="lg:col-span-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Line items ({lines.filter(l => l.name.trim()).length})</Label>
+                      <Button type="button" size="sm" variant="outline" onClick={addLine}><Plus className="h-3.5 w-3.5 mr-1" />Blank row</Button>
+                    </div>
+                    {lines.length === 0 ? (
+                      <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">
+                        Search items on the right to add them here.
+                      </CardContent></Card>
+                    ) : lines.map((l, i) => (
                       <Card key={i}><CardContent className="p-3 space-y-2">
                         <div className="flex items-center gap-2">
-                          <Tabs value={l.source} onValueChange={(v) => updateLine(i, { source: v as any, catalogue_item_id: null, item_id: null })}>
-                            <TabsList className="h-8">
-                              <TabsTrigger value="catalogue" className="h-7 text-xs"><Boxes className="h-3 w-3 mr-1" />Catalogue</TabsTrigger>
-                              <TabsTrigger value="inventory" className="h-7 text-xs"><Package className="h-3 w-3 mr-1" />Inventory</TabsTrigger>
-                              <TabsTrigger value="custom" className="h-7 text-xs"><FileText className="h-3 w-3 mr-1" />Custom</TabsTrigger>
-                            </TabsList>
-                          </Tabs>
-                          <div className="flex-1" />
-                          <Button type="button" size="icon" variant="ghost" onClick={() => removeLine(i)} disabled={lines.length === 1}><Trash2 className="h-4 w-4" /></Button>
+                          <Badge variant="outline" className="text-[10px]">
+                            {l.source === "catalogue" ? <><Boxes className="h-3 w-3 mr-1" />Catalogue</> :
+                             l.source === "inventory" ? <><Package className="h-3 w-3 mr-1" />Inventory</> :
+                             <><FileText className="h-3 w-3 mr-1" />Custom</>}
+                          </Badge>
+                          <div className="flex-1 text-xs text-muted-foreground truncate">#{i + 1}</div>
+                          <Button type="button" size="icon" variant="ghost" onClick={() => removeLine(i)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
-
-                        {l.source === "catalogue" && (
-                          <SourcePicker
-                            placeholder="Search catalogue…"
-                            options={cats.map(c => ({ id: c.id, label: c.name, sub: `${c.sku ?? ""} · ${formatPHP(c.unit_price)}` }))}
-                            value={l.catalogue_item_id ?? ""}
-                            onChange={(id) => pickFromCatalogue(i, id)}
-                          />
-                        )}
-                        {l.source === "inventory" && (
-                          <SourcePicker
-                            placeholder="Search inventory item…"
-                            options={invs.map(it => ({ id: it.id, label: it.name, sub: `${it.sku} · ${formatPHP(it.unit_price ?? 0)}` }))}
-                            value={l.item_id ?? ""}
-                            onChange={(id) => pickFromInventory(i, id)}
-                          />
-                        )}
-
                         <div className="grid grid-cols-12 gap-2">
                           <div className="col-span-6"><Label className="text-xs">Name</Label><Input value={l.name} onChange={e => updateLine(i, { name: e.target.value })} /></div>
                           <div className="col-span-2"><Label className="text-xs">Qty</Label><Input type="number" step="0.01" value={l.quantity} onChange={e => updateLine(i, { quantity: Number(e.target.value) })} /></div>
@@ -387,7 +372,32 @@ const Quotations = () => {
                       </CardContent></Card>
                     ))}
                   </div>
+
+                  {/* RIGHT: Search panel */}
+                  <div className="lg:col-span-1">
+                    <Card className="lg:sticky lg:top-2"><CardContent className="p-3 space-y-2">
+                      <Label>Add item</Label>
+                      <ItemSearchPanel
+                        cats={cats}
+                        invs={invs}
+                        onAddCatalogue={(c) => setLines(ls => [...ls, {
+                          source: "catalogue", catalogue_item_id: c.id, item_id: null,
+                          name: c.name, description: c.description,
+                          quantity: 1, unit_price: Number(c.unit_price) || 0,
+                          line_total: Number(c.unit_price) || 0, sort_order: ls.length,
+                        }])}
+                        onAddInventory={(it) => setLines(ls => [...ls, {
+                          source: "inventory", catalogue_item_id: null, item_id: it.id,
+                          name: it.name, description: null,
+                          quantity: 1, unit_price: Number(it.unit_price) || 0,
+                          line_total: Number(it.unit_price) || 0, sort_order: ls.length,
+                        }])}
+                        onAddCustom={() => setLines(ls => [...ls, emptyLine(ls.length)])}
+                      />
+                    </CardContent></Card>
+                  </div>
                 </div>
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -444,6 +454,74 @@ const Quotations = () => {
           </TableBody>
         </Table>
       </CardContent></Card>
+    </div>
+  );
+};
+
+// Right-side search panel: pick from catalogue / inventory, or add custom
+const ItemSearchPanel = ({ cats, invs, onAddCatalogue, onAddInventory, onAddCustom }: {
+  cats: Cat[]; invs: Inv[];
+  onAddCatalogue: (c: Cat) => void;
+  onAddInventory: (it: Inv) => void;
+  onAddCustom: () => void;
+}) => {
+  const [tab, setTab] = useState<"catalogue" | "inventory">("catalogue");
+  const [q, setQ] = useState("");
+  const filteredCats = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return cats;
+    return cats.filter(c => [c.name, c.sku, c.description].some(v => (v ?? "").toLowerCase().includes(s)));
+  }, [cats, q]);
+  const filteredInvs = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return invs;
+    return invs.filter(i => [i.name, i.sku].some(v => (v ?? "").toLowerCase().includes(s)));
+  }, [invs, q]);
+
+  return (
+    <div className="space-y-2">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+        <TabsList className="w-full h-8">
+          <TabsTrigger value="catalogue" className="flex-1 h-7 text-xs"><Boxes className="h-3 w-3 mr-1" />Catalogue</TabsTrigger>
+          <TabsTrigger value="inventory" className="flex-1 h-7 text-xs"><Package className="h-3 w-3 mr-1" />Inventory</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <div className="relative">
+        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input className="pl-8 h-9" placeholder={`Search ${tab}…`} value={q} onChange={e => setQ(e.target.value)} />
+      </div>
+      <div className="max-h-[420px] overflow-y-auto border rounded-md divide-y">
+        {tab === "catalogue" ? (
+          filteredCats.length === 0 ? (
+            <div className="p-4 text-center text-xs text-muted-foreground">No catalogue items.</div>
+          ) : filteredCats.map(c => (
+            <button key={c.id} type="button" onClick={() => onAddCatalogue(c)}
+              className="w-full text-left p-2 hover:bg-accent transition flex items-start gap-2">
+              <Plus className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{c.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{c.sku ?? "—"} · {formatPHP(c.unit_price)}</div>
+              </div>
+            </button>
+          ))
+        ) : (
+          filteredInvs.length === 0 ? (
+            <div className="p-4 text-center text-xs text-muted-foreground">No inventory items.</div>
+          ) : filteredInvs.map(it => (
+            <button key={it.id} type="button" onClick={() => onAddInventory(it)}
+              className="w-full text-left p-2 hover:bg-accent transition flex items-start gap-2">
+              <Plus className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{it.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{it.sku} · {formatPHP(it.unit_price ?? 0)}</div>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+      <Button type="button" variant="outline" size="sm" className="w-full" onClick={onAddCustom}>
+        <FileText className="h-3.5 w-3.5 mr-1" />Add custom line
+      </Button>
     </div>
   );
 };
