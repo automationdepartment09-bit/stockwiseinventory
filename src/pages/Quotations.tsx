@@ -458,6 +458,74 @@ const Quotations = () => {
   );
 };
 
+// Right-side search panel: pick from catalogue / inventory, or add custom
+const ItemSearchPanel = ({ cats, invs, onAddCatalogue, onAddInventory, onAddCustom }: {
+  cats: Cat[]; invs: Inv[];
+  onAddCatalogue: (c: Cat) => void;
+  onAddInventory: (it: Inv) => void;
+  onAddCustom: () => void;
+}) => {
+  const [tab, setTab] = useState<"catalogue" | "inventory">("catalogue");
+  const [q, setQ] = useState("");
+  const filteredCats = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return cats;
+    return cats.filter(c => [c.name, c.sku, c.description].some(v => (v ?? "").toLowerCase().includes(s)));
+  }, [cats, q]);
+  const filteredInvs = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return invs;
+    return invs.filter(i => [i.name, i.sku].some(v => (v ?? "").toLowerCase().includes(s)));
+  }, [invs, q]);
+
+  return (
+    <div className="space-y-2">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+        <TabsList className="w-full h-8">
+          <TabsTrigger value="catalogue" className="flex-1 h-7 text-xs"><Boxes className="h-3 w-3 mr-1" />Catalogue</TabsTrigger>
+          <TabsTrigger value="inventory" className="flex-1 h-7 text-xs"><Package className="h-3 w-3 mr-1" />Inventory</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <div className="relative">
+        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input className="pl-8 h-9" placeholder={`Search ${tab}…`} value={q} onChange={e => setQ(e.target.value)} />
+      </div>
+      <div className="max-h-[420px] overflow-y-auto border rounded-md divide-y">
+        {tab === "catalogue" ? (
+          filteredCats.length === 0 ? (
+            <div className="p-4 text-center text-xs text-muted-foreground">No catalogue items.</div>
+          ) : filteredCats.map(c => (
+            <button key={c.id} type="button" onClick={() => onAddCatalogue(c)}
+              className="w-full text-left p-2 hover:bg-accent transition flex items-start gap-2">
+              <Plus className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{c.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{c.sku ?? "—"} · {formatPHP(c.unit_price)}</div>
+              </div>
+            </button>
+          ))
+        ) : (
+          filteredInvs.length === 0 ? (
+            <div className="p-4 text-center text-xs text-muted-foreground">No inventory items.</div>
+          ) : filteredInvs.map(it => (
+            <button key={it.id} type="button" onClick={() => onAddInventory(it)}
+              className="w-full text-left p-2 hover:bg-accent transition flex items-start gap-2">
+              <Plus className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{it.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{it.sku} · {formatPHP(it.unit_price ?? 0)}</div>
+              </div>
+            </button>
+          ))
+        )}
+      </div>
+      <Button type="button" variant="outline" size="sm" className="w-full" onClick={onAddCustom}>
+        <FileText className="h-3.5 w-3.5 mr-1" />Add custom line
+      </Button>
+    </div>
+  );
+};
+
 // Local searchable picker
 const SourcePicker = ({ placeholder, options, value, onChange }: {
   placeholder: string;
