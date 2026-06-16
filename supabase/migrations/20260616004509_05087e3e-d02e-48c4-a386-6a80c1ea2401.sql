@@ -1,0 +1,1 @@
+ALTER TABLE public.quotations ADD COLUMN IF NOT EXISTS others numeric NOT NULL DEFAULT 0;
