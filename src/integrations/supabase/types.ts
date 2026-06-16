@@ -502,6 +502,7 @@ export type Database = {
           id: string
           issue_date: string
           notes: string | null
+          others: number
           quote_no: string
           status: string
           subtotal: number
@@ -523,6 +524,7 @@ export type Database = {
           id?: string
           issue_date?: string
           notes?: string | null
+          others?: number
           quote_no?: string
           status?: string
           subtotal?: number
@@ -544,6 +546,7 @@ export type Database = {
           id?: string
           issue_date?: string
           notes?: string | null
+          others?: number
           quote_no?: string
           status?: string
           subtotal?: number
